@@ -1,0 +1,183 @@
+﻿<Window x:Class="RocketLaunchpad.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:local="clr-namespace:RocketLaunchpad"
+        mc:Ignorable="d"
+        Title="Rocket Launchpad" Height="600" Width="1100" Background="#0f0f0f">
+
+    <Window.Resources>
+        <Style x:Key="AccountBorderStyle" TargetType="Border">
+            <Setter Property="Height" Value="80px" />
+            <Setter Property="Width" Value="210px" />
+            <Setter Property="Background" Value="#505050" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0, 0, 0, 22" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                To="#606060" Duration="0:0:0.2" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                To="#505050" Duration="0:0:0.2" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="AccountTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontFamily" Value="pack://application:,,,/Assets/Fonts/#Bourgeois Medium" />
+            <Setter Property="TextAlignment" Value="Left" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250px" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Nav -->
+        <Grid Column="0" Background="#151515">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="145px" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Row="0" Margin="0 15 0 0">
+                <TextBlock Text="ROCKET LAUNCHPAD" Foreground="White"
+                           TextWrapping="Wrap" Width="150px" TextAlignment="Center" HorizontalAlignment="Center"
+                           FontFamily="pack://application:,,,/Assets/Fonts/#Rubik Medium" FontSize="24" />
+
+                <!-- Icons -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,70,0,0"
+                            RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
+                    <Image Source="Assets/Icons/Discord.png" Height="45" Cursor="Hand"
+                           MouseLeftButtonDown="UI_OpenDiscord" />
+                    <Image Source="Assets/Icons/Github.png" Height="50" Cursor="Hand"
+                           MouseLeftButtonDown="UI_OpenGithub" Margin="25, 0, 25, 0" />
+                    <Image Source="Assets/Icons/Settings.png" Height="50" Cursor="Hand"
+                           MouseLeftButtonDown="UI_OpenSettings" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Accounts -->
+            <Grid Row="1">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Hidden"
+                              Padding="0, 35, 0, 0">
+                    <ScrollViewer.Resources>
+                        <Style TargetType="ScrollBar">
+                            <Setter Property="Stylus.IsFlicksEnabled" Value="False" />
+                            <Setter Property="Width" Value="6" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ScrollBar">
+                                        <Grid Background="Transparent" Width="6">
+                                            <Track Name="PART_Track" IsDirectionReversed="true">
+                                                <Track.Thumb>
+                                                    <Thumb>
+                                                        <Thumb.Template>
+                                                            <ControlTemplate>
+                                                                <Grid>
+                                                                    <Rectangle HorizontalAlignment="Stretch"
+                                                                               VerticalAlignment="Stretch" Width="Auto"
+                                                                               Height="Auto" Fill="Transparent" />
+                                                                    <Border CornerRadius="5"
+                                                                            HorizontalAlignment="Stretch"
+                                                                            VerticalAlignment="Stretch" Width="Auto"
+                                                                            Height="Auto"
+                                                                            Background="#5A5A5A" />
+                                                                </Grid>
+                                                            </ControlTemplate>
+                                                        </Thumb.Template>
+                                                    </Thumb>
+                                                </Track.Thumb>
+                                                <Track.IncreaseRepeatButton>
+                                                    <RepeatButton Command="ScrollBar.LineDownCommand"
+                                                                  Opacity="0" IsTabStop="False" Focusable="False" />
+                                                </Track.IncreaseRepeatButton>
+                                                <Track.DecreaseRepeatButton>
+                                                    <RepeatButton Command="ScrollBar.LineUpCommand"
+                                                                  Opacity="0" IsTabStop="False" Focusable="False" />
+                                                </Track.DecreaseRepeatButton>
+                                            </Track>
+                                        </Grid>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ScrollViewer.Resources>
+
+                    <ItemsControl x:Name="AccountListControl">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Vertical" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="Border">
+                                <Setter Property="Margin" Value="0,0,0,10" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+
+                        <Border x:Name="AddAccountButton" Style="{StaticResource AccountBorderStyle}"
+                                MouseLeftButtonUp="AddAccount_Click">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#00FFFF" BlurRadius="15" ShadowDepth="0" Opacity="0.7"
+                                                  RenderingBias="Quality" />
+                            </Border.Effect>
+                            <TextBlock Text="Add Account" Style="{StaticResource AccountTextStyle}" />
+                        </Border>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+
+        <!-- Content -->
+        <Grid Column="1">
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Width="850px" Height="50px" Foreground="White"
+                           FontFamily="pack://application:,,,/Assets/Fonts/#Rubik Regular" FontSize="32px"
+                           HorizontalAlignment="Center" TextAlignment="Center"
+                           Text="Welcome on Rocket Launchpad !" />
+                <TextBlock Width="850px" Height="50px" Foreground="White"
+                           FontFamily="pack://application:,,,/Assets/Fonts/#Rubik Regular" FontSize="32px"
+                           HorizontalAlignment="Center" TextAlignment="Center"
+                           Text="To begin, add an account on the left." x:Name="WelcomeTextIndication" />
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Column="0" Grid.ColumnSpan="2" x:Name="LoadingPopup" Background="#80000000" Visibility="Collapsed"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="Black" Opacity="0.15" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+            
+            <Border Width="380" Height="210" Background="Black" BorderBrush="White" BorderThickness="4"
+                    CornerRadius="10"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock x:Name="LoadingText" Text="Starting..." FontSize="20" Foreground="White"
+                               HorizontalAlignment="Center" Margin="0,10" />
+                    <ProgressBar IsIndeterminate="True" Width="230" Height="30" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

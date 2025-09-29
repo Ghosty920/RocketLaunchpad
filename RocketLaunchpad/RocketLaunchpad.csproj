@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net9.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UseWPF>true</UseWPF>
+        <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Resource Include="Assets\Fonts\Bourgeois-Medium.ttf" />
+        <Resource Include="Assets\Fonts\Rubik-Medium.ttf" />
+        <Resource Include="Assets\Fonts\Rubik-Regular.ttf" />
+        
+        <Resource Include="Assets\Icons\Discord.png" />
+        <Resource Include="Assets\Icons\Github.png" />
+        <Resource Include="Assets\Icons\Settings.png" />
+    </ItemGroup>
+
+</Project>

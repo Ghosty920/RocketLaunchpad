@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace RocketLauncher;
+namespace RocketLaunchpad;
 
 /// <summary>
 /// Interaction logic for App.xaml

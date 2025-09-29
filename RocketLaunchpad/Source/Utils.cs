@@ -1,13 +1,11 @@
-﻿namespace RocketLauncher;
+﻿namespace RocketLaunchpad;
 
 public class Utils
 {
     public const string
-        OtherClientId = "3f69e56c7649492c8cc29f1af08a8a12",
-        OtherSecret = "b51ee9cb12234f50a69efa67ef53812e",
-        FnClientId = "34a02cf8f4414e29b15921876da36f9a",
-        FnSecret = "daafbccc737745039dffe53d94fc76cf",
-        FNAuth = "MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=";
+        AuthClientId = "3f69e56c7649492c8cc29f1af08a8a12",
+        AuthSecret = "b51ee9cb12234f50a69efa67ef53812e",
+        AuthHeader = "MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=";
 
     public static long ParseDate(string date)
     {
@@ -28,6 +26,7 @@ public class Utils
             case 2: fix += "=="; break;
             case 3: fix += "="; break;
         }
+
         return fix;
     }
 }

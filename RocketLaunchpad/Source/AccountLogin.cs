@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Windows.Controls;
 
-namespace RocketLauncher;
+namespace RocketLaunchpad;
 
 public class AccountLogin
 {
@@ -13,10 +13,10 @@ public class AccountLogin
         textBlock.Text = "Getting task...";
 
         HttpClient client = new HttpClient();
-        client.DefaultRequestHeaders.Add("User-Agent", "RocketLauncher/1.0");
+        client.DefaultRequestHeaders.Add("User-Agent", "RocketLaunchpad/1.0");
         client.DefaultRequestHeaders.Add("Accept", "application/json");
 
-        var content = new StringContent($"prompt=login&client_id={Utils.OtherClientId}", Encoding.UTF8,
+        var content = new StringContent($"prompt=login&client_id={Utils.AuthClientId}", Encoding.UTF8,
             "application/x-www-form-urlencoded");
         var response = await client.PostAsync("https://api.epicgames.dev/epic/oauth/v2/deviceAuthorization", content);
         if (response.StatusCode != System.Net.HttpStatusCode.OK)
@@ -33,7 +33,7 @@ public class AccountLogin
         textBlock.Text = $"Opened page in browser";
 
         client.DefaultRequestHeaders.Add("Authorization",
-            "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Utils.OtherClientId}:{Utils.OtherSecret}")));
+            "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Utils.AuthClientId}:{Utils.AuthSecret}")));
 
         var elapsed = 0;
         while (elapsed < expiresIn)
@@ -63,6 +63,7 @@ public class AccountLogin
         var refreshToken = json.GetProperty("refresh_token").GetString();
         var refreshExpires = Utils.ParseDate(json.GetProperty("refresh_expires_at").GetString());
 
+        Console.WriteLine($"Connecting to account of id {accountId}");
         var account = await GetAccountData(client, textBlock, accountId, accessToken);
         account.EpicAccessToken = accessToken;
         account.EpicAccessExpiresAt = accessExpires;
@@ -71,12 +72,13 @@ public class AccountLogin
         return account;
     }
 
-    private static async Task<Account> GetAccountData(HttpClient client, TextBlock textBlock, string accountId, string accessToken)
+    private static async Task<Account> GetAccountData(HttpClient client, TextBlock textBlock, string accountId,
+        string accessToken)
     {
         var payload = Utils.FixBase64(accessToken.Split('.')[1]);
         var accJson = JsonDocument.Parse(Convert.FromBase64String(payload));
         var jti = accJson.RootElement.GetProperty("jti").GetString();
-        
+
         var request = new HttpRequestMessage(HttpMethod.Post,
             $"https://account-public-service-prod.ol.epicgames.com/account/api/public/account/{accountId}/deviceAuth");
         request.Headers.Add("Authorization", $"Bearer {jti}");
@@ -102,7 +104,7 @@ public class AccountLogin
     private static async Task<Account> GetAccountToken(HttpClient client, TextBlock textBlock, string accountId,
         string deviceId, string secret)
     {
-        var token = Convert.ToBase64String(Encoding.UTF8.GetBytes(Utils.OtherClientId + ":" + Utils.OtherSecret));
+        var token = Convert.ToBase64String(Encoding.UTF8.GetBytes(Utils.AuthClientId + ":" + Utils.AuthSecret));
         var content =
             $"grant_type=device_auth&device_id={deviceId}&account_id={accountId}&secret={secret}&token_type=eg1";
         var res = await GetOauthToken(client, token, content);
@@ -131,7 +133,7 @@ public class AccountLogin
     public static async Task<string?> GetAuthPassword(Account account)
     {
         HttpClient client = new HttpClient();
-        client.DefaultRequestHeaders.Add("User-Agent", "RocketLauncher/1.0");
+        client.DefaultRequestHeaders.Add("User-Agent", "RocketLaunchpad/1.0");
         client.DefaultRequestHeaders.Add("Accept", "application/json");
 
         if (Utils.Expired(account.AccAccessExpiresAt))
@@ -141,11 +143,11 @@ public class AccountLogin
 
         var exchangeCode = await GetOauthExchange(client, account.AccAccessToken);
         if (exchangeCode == null) return null;
-       
+
         var tokenContent = $"grant_type=exchange_code&exchange_code={exchangeCode}";
-        var token = await GetOauthToken(client, Utils.FNAuth, tokenContent);
-        if(token == null) return null;
-        
+        var token = await GetOauthToken(client, Utils.AuthHeader, tokenContent);
+        if (token == null) return null;
+
         var accToken = token.Value.GetProperty("access_token").GetString();
         var authPassword = await GetOauthExchange(client, accToken);
         return authPassword;
@@ -177,18 +179,3 @@ public class AccountLogin
         return json.GetProperty("code").GetString();
     }
 }
-
-/*
-"E:/Jeux/rocketleague/Binaries/Win64/RocketLeague.exe"  
-    -AUTH_LOGIN=unused 
-    -AUTH_PASSWORD=0f718d1e08ef40e9b4d779c0b68a553e 
-    -AUTH_TYPE=exchangecode 
-    -epicapp=Sugar 
-    -epicenv=Prod 
-    -EpicPortal 
-    -language=INT 
-    -epicusername="Ghost?y" 
-    -epicuserid=9b24c7c2c10848a8aee1ba5caf87f597 
-    -epiclocale=fr 
-    -epicsandboxid=9773aa1aa54f4f7b80e44bef04986cea
-*/

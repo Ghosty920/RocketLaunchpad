@@ -1,4 +1,4 @@
-﻿namespace RocketLauncher;
+﻿namespace RocketLaunchpad;
 
 public class Account
 {
