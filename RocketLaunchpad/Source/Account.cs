@@ -1,6 +1,4 @@
-﻿using static RocketLaunchpad.Utils;
-
-namespace RocketLaunchpad;
+﻿namespace RocketLaunchpad;
 
 public class Account
 {

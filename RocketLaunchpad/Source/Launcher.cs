@@ -42,7 +42,7 @@ public static class Launcher
             AccountManager.Save();
         }
 
-        var exchangeCode = await LoginUtils.GetOauthExchange(account.AccessToken);
+        var exchangeCode = await LoginUtils.GetOauthExchange(account.AccessToken!);
         if (exchangeCode is null) return null;
 
         var tokenContent = $"grant_type=exchange_code&exchange_code={exchangeCode}";
