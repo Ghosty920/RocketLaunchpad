@@ -12,9 +12,6 @@ public static class Launcher
         if (authPw is null) throw new Exception("Getting Auth Password failed");
         Console.WriteLine($"Auth Password obtained: {authPw}");
 
-        // TODO: Setup a way to get it manually :thumbsup:
-        const string fileName = @"E:\Jeux\rocketleague\Binaries\Win64\RocketLeague.exe";
-
         var args =
             "-AUTH_LOGIN=unused " +
             $"-AUTH_PASSWORD={authPw} " +
@@ -22,14 +19,14 @@ public static class Launcher
             "-epicapp=Sugar " +
             "-epicenv=Prod " +
             "-EpicPortal " +
-            "-language=INT " +
+            $"{Config.Instance.LaunchArgs} " +
             "-epicusername=\"\" " +
             $"-epicuserid={account.AccountId} ";
 
         Process.Start(new ProcessStartInfo
         {
             FileName = "cmd",
-            Arguments = $"/c start \"\" \"{fileName}\" {args}",
+            Arguments = $"/c start \"\" \"{Config.Instance.LaunchPath}\" {args}",
             UseShellExecute = false,
             CreateNoWindow = true,
         });

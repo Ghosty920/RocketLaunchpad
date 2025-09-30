@@ -5,22 +5,15 @@ namespace RocketLaunchpad;
 
 public static class AccountManager
 {
-    private static readonly string AppDataFolder = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "RocketLaunchpad"
-    );
-    
-    private static readonly string SaveFile = Path.Combine(AppDataFolder, "accounts.json");
-    
-    private static readonly JsonSerializerOptions JsonSerializeOptions = new() { WriteIndented = true };
+    private static readonly string SaveFile = Path.Combine(Utils.AppDataFolder, "accounts.json");
 
     public static List<Account> Accounts { get; private set; } = new();
     public static int SelectedIndex { get; set; } = -1;
 
     public static void Load()
     {
-        if (!Directory.Exists(AppDataFolder))
-            Directory.CreateDirectory(AppDataFolder);
+        if (!Directory.Exists(Utils.AppDataFolder))
+            Directory.CreateDirectory(Utils.AppDataFolder);
 
         if (File.Exists(SaveFile))
         {
@@ -36,10 +29,10 @@ public static class AccountManager
 
     public static void Save()
     {
-        if (!Directory.Exists(AppDataFolder))
-            Directory.CreateDirectory(AppDataFolder);
+        if (!Directory.Exists(Utils.AppDataFolder))
+            Directory.CreateDirectory(Utils.AppDataFolder);
 
-        var json = JsonSerializer.Serialize(Accounts, JsonSerializeOptions);
+        var json = JsonSerializer.Serialize(Accounts, Utils.JsonSerializeOptions);
         File.WriteAllText(SaveFile, json);
         Console.WriteLine($"Saved {Accounts.Count} accounts");
     }
