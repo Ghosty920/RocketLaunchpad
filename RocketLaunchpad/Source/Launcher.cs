@@ -42,6 +42,7 @@ public static class Launcher
             await account.Refresh();
             if (Expired(account.AccessExpiresAt)) 
                 throw new Exception("Refreshing Access Token failed");
+            AccountManager.Save();
         }
 
         var exchangeCode = await LoginUtils.GetOauthExchange(account.AccessToken);
