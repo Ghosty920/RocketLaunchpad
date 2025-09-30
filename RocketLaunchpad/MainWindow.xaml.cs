@@ -38,10 +38,17 @@ public partial class MainWindow : Window
             };
             border.Child = userText;
 
-            border.MouseLeftButtonDown += (s, e) =>
+            border.MouseLeftButtonDown += async (s, e) =>
             {
                 MessageBox.Show($"Launching game with {acc.Username}");
-                Launcher.LaunchGame(acc);
+                try
+                {
+                    await Launcher.LaunchGame(acc);
+                }
+                catch (Exception exception)
+                {
+                    MessageBox.Show(exception.Message, "Launch Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             };
 
             var index = AccountListControl.Items.IndexOf(AddAccountButton);
@@ -54,12 +61,18 @@ public partial class MainWindow : Window
         try
         {
             LoadingPopup.Visibility = Visibility.Visible;
-            var account = await AccountLogin.RegisterAccount(LoadingText);
-            if(account == null) throw new Exception("Could not register account");
+            var account = await AccountProcess.Login(LoadingText);
+            if (account is null
+                or { AccountId: null }
+                or { AuthDeviceId: null }
+                or { AuthSecret: null }
+                or { AccessToken: null }) // this last line is just to make sure the DeviceId & Secret are valid
+                throw new Exception("Could not register account");
             AccountManager.Add(account);
         }
         catch (Exception exception)
         {
+            MessageBox.Show(exception.Message, "Login Failed", MessageBoxButton.OK, MessageBoxImage.Error);
             Console.WriteLine(exception);
         }
         finally

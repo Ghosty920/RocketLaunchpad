@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 
 namespace RocketLaunchpad;
@@ -11,8 +9,10 @@ public static class AccountManager
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "RocketLaunchpad"
     );
-
+    
     private static readonly string SaveFile = Path.Combine(AppDataFolder, "accounts.json");
+    
+    private static readonly JsonSerializerOptions JsonSerializeOptions = new() { WriteIndented = true };
 
     public static List<Account> Accounts { get; private set; } = new();
     public static int SelectedIndex { get; set; } = -1;
@@ -39,7 +39,7 @@ public static class AccountManager
         if (!Directory.Exists(AppDataFolder))
             Directory.CreateDirectory(AppDataFolder);
 
-        var json = JsonSerializer.Serialize(Accounts, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(Accounts, JsonSerializeOptions);
         File.WriteAllText(SaveFile, json);
         Console.WriteLine($"Saved {Accounts.Count} accounts");
     }

@@ -19,4 +19,8 @@
         <Resource Include="Assets\Icons\Settings.png" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Assets\Ranks\" />
+    </ItemGroup>
+
 </Project>

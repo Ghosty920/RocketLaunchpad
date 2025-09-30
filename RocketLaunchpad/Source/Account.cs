@@ -1,22 +1,31 @@
-﻿namespace RocketLaunchpad;
+﻿using static RocketLaunchpad.Utils;
+
+namespace RocketLaunchpad;
 
 public class Account
 {
-    
-    public string Username { get; set; }
-    public string AccountId { get; set; }
-    
-    public string AuthDeviceId { get; set; }
-    public string AuthSecret { get; set; }
-    
-    public string EpicAccessToken { get; set; }
-    public long EpicAccessExpiresAt { get; set; }
-    public string EpicRefreshToken { get; set; }
-    public long EpicRefreshExpiresAt { get; set; }
-    
-    public string AccAccessToken { get; set; }
-    public long AccAccessExpiresAt { get; set; }
-    public string AccRefreshToken { get; set; }
-    public long AccRefreshExpiresAt { get; set; }
-    
+    public string? Username { get; set; }
+    public string? AccountId { get; set; }
+
+    public string? AuthDeviceId { get; set; }
+    public string? AuthSecret { get; set; }
+
+    public string? AccessToken { get; set; }
+    public long AccessExpiresAt { get; set; }
+    public string? RefreshToken { get; set; }
+    public long RefreshExpiresAt { get; set; }
+
+    public async Task Refresh()
+    {
+        // TODO add an implementation using RefreshToken
+        
+        try
+        {
+            await AccountLogin.UseDeviceAuth(this);
+        }
+        catch (Exception exception)
+        {
+            throw new Exception("Fetching Access using Device Auth failed.", exception);
+        }
+    }
 }

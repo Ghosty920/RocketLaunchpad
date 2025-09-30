@@ -82,7 +82,7 @@
             <!-- Accounts -->
             <Grid Row="1">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Hidden"
-                              Padding="0, 35, 0, 0">
+                              Padding="0, 25, 0, 0">
                     <ScrollViewer.Resources>
                         <Style TargetType="ScrollBar">
                             <Setter Property="Stylus.IsFlicksEnabled" Value="False" />
@@ -126,7 +126,7 @@
                         </Style>
                     </ScrollViewer.Resources>
 
-                    <ItemsControl x:Name="AccountListControl">
+                    <ItemsControl x:Name="AccountListControl" Padding="0, 10, 0, 0">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel Orientation="Vertical" />

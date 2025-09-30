@@ -1,12 +1,23 @@
-﻿namespace RocketLaunchpad;
+﻿using System.Net.Http;
 
-public class Utils
+namespace RocketLaunchpad;
+
+public static class Utils
 {
     public const string
         AuthClientId = "3f69e56c7649492c8cc29f1af08a8a12",
         AuthSecret = "b51ee9cb12234f50a69efa67ef53812e",
-        AuthHeader = "MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=";
+        AuthToken = "M2Y2OWU1NmM3NjQ5NDkyYzhjYzI5ZjFhZjA4YThhMTI6YjUxZWU5Y2IxMjIzNGY1MGE2OWVmYTY3ZWY1MzgxMmU=",
+        AuthEglToken = "MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=";
 
+    public static HttpClient Client { get; } = new ();
+
+    static Utils()
+    {
+        Client.DefaultRequestHeaders.Add("User-Agent", "RocketLaunchpad/1.0"); // the version shall not change
+        Client.DefaultRequestHeaders.Add("Accept", "application/json");
+    }
+    
     public static long ParseDate(string date)
     {
         var parsed = DateTime.Parse(date, null, System.Globalization.DateTimeStyles.AdjustToUniversal);
