@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
@@ -18,23 +18,27 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet publish -c Release /p:Version=$VERSION -r win-x64 --self-contained true --no-restore -o out
+        run: dotnet publish -c Release /p:Version=$env:VERSION --self-contained true --no-restore -o out
+        shell: pwsh
       - name: Remove language files
-        run: find out -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+        run: Get-ChildItem out -Directory | Remove-Item -Recurse -Force
+        shell: pwsh
       - name: Zip Release
-        run: zip -r RocketLaunchpad-$VERSION.zip out/
+        run: Compress-Archive -Path out\* -DestinationPath RocketLaunchpad-$env:VERSION.zip
         
       - name: Install NSIS
-        run: sudo apt-get update && sudo apt-get install -y nsis
+        run: choco install nsis -y
       - name: Create NSIS installer
         run: |
-          echo 'OutFile "RocketLaunchpad-${VERSION}-Setup.exe"' > installer.nsi
-          echo 'InstallDir "$PROGRAMFILES\RocketLaunchpad"' >> installer.nsi
-          echo 'Section' >> installer.nsi
-          echo '  SetOutPath "$INSTDIR"' >> installer.nsi
-          echo '  File /r "out/*"' >> installer.nsi
-          echo '  CreateShortCut "$DESKTOP\RocketLaunchpad.lnk" "$INSTDIR\RocketLaunchpad.exe"' >> installer.nsi
-          echo 'SectionEnd' >> installer.nsi
+          @"
+          OutFile "RocketLaunchpad-$env:VERSION-Setup.exe"
+          InstallDir "$PROGRAMFILES\RocketLaunchpad"
+          Section
+            SetOutPath "$INSTDIR"
+            File /r "out/*"
+            CreateShortCut "$DESKTOP\RocketLaunchpad.lnk" "$INSTDIR\RocketLaunchpad.exe"
+          SectionEnd
+          "@ > installer.nsi
           makensis installer.nsi
         
       - name: Create Release
