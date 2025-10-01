@@ -38,12 +38,13 @@ jobs:
           nsis-version: "3.11"
       - name: Create NSIS installer
         run: |
+          Get-ChildItem out
           @"
           OutFile "RocketLaunchpad-$env:VERSION-Setup.exe"
           InstallDir "$PROGRAMFILES\RocketLaunchpad"
           Section
             SetOutPath "$INSTDIR"
-            File /r "out/*"
+            File /r "out\*"
             CreateShortCut "$DESKTOP\RocketLaunchpad.lnk" "$INSTDIR\RocketLaunchpad.exe"
           SectionEnd
           "@ > installer.nsi
