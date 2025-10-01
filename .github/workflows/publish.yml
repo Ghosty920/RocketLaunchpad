@@ -8,8 +8,12 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
+      - name: Set version variable
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+          echo "Version: $env:VERSION"
+        shell: pwsh
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
