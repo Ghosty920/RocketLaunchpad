@@ -11,8 +11,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set version variable
         run: |
-          echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
-          echo "Version: $env:VERSION"
+          $version = $env:GITHUB_REF -replace 'refs/tags/v',''
+          Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version"
+          Write-Host "Version: $version"
         shell: pwsh
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -29,6 +30,7 @@ jobs:
         shell: pwsh
       - name: Zip Release
         run: Compress-Archive -Path out\* -DestinationPath RocketLaunchpad-$env:VERSION.zip
+        shell: pwsh
         
       - name: Install NSIS
         run: choco install nsis -y
@@ -44,6 +46,7 @@ jobs:
           SectionEnd
           "@ > installer.nsi
           makensis installer.nsi
+        shell: pwsh
         
       - name: Create Release
         uses: softprops/action-gh-release@v1
