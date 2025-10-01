@@ -32,6 +32,10 @@ jobs:
         run: Compress-Archive -Path out\* -DestinationPath RocketLaunchpad-$env:VERSION.zip
         shell: pwsh
         
+      - name: Install NSIS
+        uses: repolevedavaj/install-nsis@v1
+        with: 
+          nsis-version: "3.11"
       - name: Create NSIS installer
         run: |
           @"
@@ -43,7 +47,7 @@ jobs:
             CreateShortCut "$DESKTOP\RocketLaunchpad.lnk" "$INSTDIR\RocketLaunchpad.exe"
           SectionEnd
           "@ > installer.nsi
-          & "C:\ProgramData\chocolatey\lib\nsis\tools\makensis.exe" installer.nsi
+          makensis installer.nsi
         shell: pwsh
         
       - name: Create Release
