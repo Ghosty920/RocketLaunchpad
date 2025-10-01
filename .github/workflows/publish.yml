@@ -1,0 +1,54 @@
+﻿name: Build
+
+on:
+  push:
+    tags: [ "v*" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+        
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet publish -c Release /p:Version=$VERSION -r win-x64 --self-contained true --no-restore -o out
+      - name: Remove language files
+        run: find out -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+      - name: Zip Release
+        run: zip -r RocketLaunchpad-$VERSION.zip out/
+        
+      - name: Install NSIS
+        run: sudo apt-get update && sudo apt-get install -y nsis
+      - name: Create NSIS installer
+        run: |
+          echo 'OutFile "RocketLaunchpad-${VERSION}-Setup.exe"' > installer.nsi
+          echo 'InstallDir "$PROGRAMFILES\RocketLaunchpad"' >> installer.nsi
+          echo 'Section' >> installer.nsi
+          echo '  SetOutPath "$INSTDIR"' >> installer.nsi
+          echo '  File /r "out/*"' >> installer.nsi
+          echo '  CreateShortCut "$DESKTOP\RocketLaunchpad.lnk" "$INSTDIR\RocketLaunchpad.exe"' >> installer.nsi
+          echo 'SectionEnd' >> installer.nsi
+          makensis installer.nsi
+        
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            RocketLaunchpad-${{ env.VERSION }}-Setup.exe
+            RocketLaunchpad-${{ env.VERSION }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
