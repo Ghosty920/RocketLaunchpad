@@ -32,8 +32,6 @@ jobs:
         run: Compress-Archive -Path out\* -DestinationPath RocketLaunchpad-$env:VERSION.zip
         shell: pwsh
         
-      - name: Install NSIS
-        run: choco install nsis -y
       - name: Create NSIS installer
         run: |
           @"
@@ -45,7 +43,7 @@ jobs:
             CreateShortCut "$DESKTOP\RocketLaunchpad.lnk" "$INSTDIR\RocketLaunchpad.exe"
           SectionEnd
           "@ > installer.nsi
-          makensis installer.nsi
+          & "C:\ProgramData\chocolatey\lib\nsis\tools\makensis.exe" installer.nsi
         shell: pwsh
         
       - name: Create Release
