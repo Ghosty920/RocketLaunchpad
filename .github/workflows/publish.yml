@@ -18,7 +18,7 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet publish -c Release /p:Version=$env:VERSION --self-contained true --no-restore -o out
+        run: dotnet publish -c Release /p:Version=$env:VERSION /p:NuGetVersion=$env:VERSION --self-contained true --no-restore -o out
         shell: pwsh
       - name: Remove language files
         run: Get-ChildItem out -Directory | Remove-Item -Recurse -Force
