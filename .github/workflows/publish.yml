@@ -26,13 +26,13 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet publish -c Release /p:Version=$env:VERSION /p:NuGetVersion=$env:VERSION --self-contained true --no-restore -o out
+        run: dotnet publish -c Release /p:Version=$env:VERSION /p:NuGetVersion=$env:VERSION --self-contained true --no-restore -o dist\out
         shell: pwsh
       - name: Remove language files
-        run: Get-ChildItem out -Directory | Remove-Item -Recurse -Force
+        run: Get-ChildItem dist\out -Directory | Remove-Item -Recurse -Force
         shell: pwsh
       - name: Zip Release
-        run: Compress-Archive -Path out\* -DestinationPath RocketLaunchpad-$env:VERSION.zip
+        run: Compress-Archive -Path dist\out\* -DestinationPath dist\RocketLaunchpad-$env:VERSION.zip
         shell: pwsh
         
       - name: Install NSIS
@@ -41,16 +41,8 @@ jobs:
           nsis-version: "3.11"
       - name: Create NSIS installer
         run: |
-          @"
-          OutFile "RocketLaunchpad-$env:VERSION-Setup.exe"
-          InstallDir "$PROGRAMFILES\RocketLaunchpad"
-          Section
-            SetOutPath "$INSTDIR"
-            File /r "out\*"
-            CreateShortCut "$DESKTOP\RocketLaunchpad.lnk" "$INSTDIR\RocketLaunchpad.exe"
-          SectionEnd
-          "@ > installer.nsi
-          makensis installer.nsi
+          (Get-Content dist\installer.nsi) -replace '\$\(VERSION\)', $env:VERSION | Set-Content "dist\installer.nsi"
+          makensis dist\installer.nsi
         shell: pwsh
         
       - name: Create Release
@@ -59,7 +51,7 @@ jobs:
           name: Release ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            RocketLaunchpad-${{ env.VERSION }}-Setup.exe
-            RocketLaunchpad-${{ env.VERSION }}.zip
+            dist\RocketLaunchpad-${{ env.VERSION }}-Setup.exe
+            dist\RocketLaunchpad-${{ env.VERSION }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

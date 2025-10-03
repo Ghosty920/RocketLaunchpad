@@ -18,9 +18,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build -c Debug --no-restore -o out
+        run: dotnet build -c Debug --no-restore -o dist\out
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with: 
-          path: out/
+          path: dist/out/
           retention-days: 90
