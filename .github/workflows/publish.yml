@@ -50,8 +50,7 @@ jobs:
         with:
           name: Release ${{ github.ref_name }}
           generate_release_notes: true
-          files: |
-            dist\RocketLaunchpad-${{ env.VERSION }}-Setup.exe
-            dist\RocketLaunchpad-${{ env.VERSION }}.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          overwrite_files: true
+          draft: false
+          files: dist/RocketLaunchpad-${{ env.VERSION }}-Setup.exe,dist/RocketLaunchpad-${{ env.VERSION }}.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
