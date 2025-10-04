@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using RocketLaunchpad.Components;
 
 namespace RocketLaunchpad;
 
@@ -21,9 +22,7 @@ public partial class MainWindow : Window
             AccountListControl.Items.RemoveAt(i);
         }
 
-        WelcomeTextIndication.Text = AccountManager.Accounts.Count == 0
-            ? "To begin, add an account on the left."
-            : "To begin, select an account on the left.";
+        GridContent.Children.OfType<WelcomePage>().FirstOrDefault()?.Refresh();
 
         foreach (var acc in AccountManager.Accounts)
         {
@@ -102,6 +101,14 @@ public partial class MainWindow : Window
 
     private void UI_OpenSettings(object sender, MouseButtonEventArgs e)
     {
-        MessageBox.Show("Not implemented yet");
+        if (GridContent.Children[0] is SettingsPage) {
+            GridContent.Children.Clear();
+            GridContent.Children.Add(new WelcomePage());
+        }
+        else
+        {
+            GridContent.Children.Clear();
+            GridContent.Children.Add(new SettingsPage());
+        }
     }
 }

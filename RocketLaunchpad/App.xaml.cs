@@ -26,9 +26,11 @@ public partial class App : Application
 
     private void HarassUser()
     {
-        var dialog = new OpenFileDialog();
-        dialog.Filter = "RocketLeague.exe|RocketLeague.exe";
-        dialog.Title = "Select RocketLeague.exe";
+        var dialog = new OpenFileDialog
+        {
+            Filter = "RocketLeague.exe|RocketLeague.exe",
+            Title = "Select RocketLeague.exe",
+        };
         var completed = dialog.ShowDialog();
         if (completed != true)
         {
@@ -53,6 +55,7 @@ public partial class App : Application
             return;
         }
 
+        Console.WriteLine("Set RocketLeague.exe path to: " + path);
         Config.Instance.LaunchPath = path;
         Config.Save();
     }

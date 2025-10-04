@@ -36,7 +36,7 @@ Function .onInit
     StrCmp $0 "" 0 installed
     Return
 installed:
-    StrCpy $1 "Rocket Launchpad is already installed at $0.$\r$\nDo you want to uninstall it ?"
+    StrCpy $1 "Rocket Launchpad is already installed at $0.$\r$\nDo you want to uninstall it ?$\r$\n(If updating, select Yes)"
     MessageBox MB_YESNO|MB_ICONQUESTION $1 IDYES uninstall IDNO abort
 uninstall:
     ExecWait '"$0\uninstall.exe"'

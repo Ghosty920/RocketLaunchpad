@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:RocketLaunchpad"
+        xmlns:components="clr-namespace:RocketLaunchpad.Components"
         mc:Ignorable="d"
         Title="Rocket Launchpad" Height="600" Width="1100" Background="#0f0f0f">
 
@@ -152,17 +153,8 @@
         </Grid>
 
         <!-- Content -->
-        <Grid Column="1">
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock Width="850px" Height="50px" Foreground="White"
-                           FontFamily="pack://application:,,,/Assets/Fonts/#Rubik Regular" FontSize="32px"
-                           HorizontalAlignment="Center" TextAlignment="Center"
-                           Text="Welcome on Rocket Launchpad !" />
-                <TextBlock Width="850px" Height="50px" Foreground="White"
-                           FontFamily="pack://application:,,,/Assets/Fonts/#Rubik Regular" FontSize="32px"
-                           HorizontalAlignment="Center" TextAlignment="Center"
-                           Text="To begin, add an account on the left." x:Name="WelcomeTextIndication" />
-            </StackPanel>
+        <Grid Column="1" x:Name="GridContent">
+            <components:WelcomePage />
         </Grid>
 
         <Grid Grid.Column="0" Grid.ColumnSpan="2" x:Name="LoadingPopup" Background="#80000000" Visibility="Collapsed"
