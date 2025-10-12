@@ -12,6 +12,8 @@ public class Config
     public string LaunchPath { get; set; } = "";
     public string LaunchArgs { get; set; } = "-language=INT";
     
+    public bool CloseOnLaunch { get; set; } = false;
+    
     public static void Load()
     {
         if (!Directory.Exists(Utils.AppDataFolder))

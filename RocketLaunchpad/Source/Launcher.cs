@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Windows;
 using static RocketLaunchpad.Utils;
 
 namespace RocketLaunchpad;
@@ -30,6 +31,11 @@ public static class Launcher
             UseShellExecute = false,
             CreateNoWindow = true,
         });
+
+        if (Config.Instance.CloseOnLaunch)
+        {
+            Application.Current.Shutdown();
+        }
     }
 
     private static async Task<string?> GetAuthPassword(Account account)

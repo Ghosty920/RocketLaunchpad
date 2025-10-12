@@ -13,6 +13,7 @@ public partial class SettingsPage : UserControl
         InitializeComponent();
         GamePath.Text = Config.Instance.LaunchPath;
         LaunchArgs.Text = Config.Instance.LaunchArgs;
+        CloseLaunchSwitch.IsChecked = Config.Instance.CloseOnLaunch;
     }
 
     private void BrowseLaunchPath_Click(object sender, RoutedEventArgs e)
@@ -51,6 +52,18 @@ public partial class SettingsPage : UserControl
         var args = LaunchArgs.Text;
         Console.WriteLine("Set launch arguments to: " + args);
         Config.Instance.LaunchArgs = args;
+        Config.Save();
+    }
+
+    private void CloseLaunchSwitch_On(object sender, RoutedEventArgs e)
+    {
+        Config.Instance.CloseOnLaunch = true;
+        Config.Save();
+    }
+    
+    private void CloseLaunchSwitch_Off(object sender, RoutedEventArgs e)
+    {
+        Config.Instance.CloseOnLaunch = false;
         Config.Save();
     }
 }

@@ -22,6 +22,82 @@
             <Setter Property="MaxLines" Value="1" />
             <Setter Property="BorderThickness" Value="0" />
         </Style>
+
+        <Style x:Key="SwitchToggleButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid>
+                            <Border x:Name="SwitchBorder"
+                                    CornerRadius="13"
+                                    Background="#CCCCCC"
+                                    BorderThickness="0">
+                                <Border.Effect>
+                                    <DropShadowEffect ShadowDepth="0"
+                                                      BlurRadius="4"
+                                                      Opacity="0.2" />
+                                </Border.Effect>
+                            </Border>
+                            <Canvas>
+                                <Border x:Name="SwitchThumb"
+                                        Width="20"
+                                        Height="20"
+                                        CornerRadius="10"
+                                        Background="White"
+                                        Canvas.Left="3"
+                                        Canvas.Top="3">
+                                    <Border.Effect>
+                                        <DropShadowEffect ShadowDepth="1"
+                                                          BlurRadius="3"
+                                                          Opacity="0.3" />
+                                    </Border.Effect>
+                                </Border>
+                            </Canvas>
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <!-- Animation quand activé -->
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="SwitchBorder" Property="Background" Value="#4CAF50" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb"
+                                                             Storyboard.TargetProperty="(Canvas.Left)"
+                                                             To="27"
+                                                             Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb"
+                                                             Storyboard.TargetProperty="(Canvas.Left)"
+                                                             To="3"
+                                                             Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+
+                            <!-- Effet hover -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SwitchBorder" Property="Opacity" Value="0.9" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <StackPanel Orientation="Vertical" Margin="20" HorizontalAlignment="Stretch" VerticalAlignment="Top">
@@ -45,9 +121,23 @@
             <TextBlock Style="{StaticResource TextStyle}" Text="Launch Arguments:" Margin="0,0,0,10" />
             <Border HorizontalAlignment="Left" Background="#5f5f5f" Padding="10" CornerRadius="15" Margin="0,0,0,10">
                 <TextBox x:Name="LaunchArgs" Style="{StaticResource InputStyle}" Text="-language=INT" Width="700"
-                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch" TextAlignment="Left" 
+                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch" TextAlignment="Left"
                          LostFocus="UIElement_OnLostFocus" />
             </Border>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Margin="0, 0,0, 35" HorizontalAlignment="Left">
+            <TextBlock Style="{StaticResource TextStyle}" 
+               Text="Clone on launch:" 
+               Margin="0,0,10,0"
+               VerticalAlignment="Center"/>
+            <ToggleButton x:Name="CloseLaunchSwitch"
+                  Width="50"
+                  Height="26"
+                  VerticalAlignment="Center"
+                  Checked="CloseLaunchSwitch_On"
+                  Unchecked="CloseLaunchSwitch_Off"
+                  Style="{StaticResource SwitchToggleButtonStyle}" />
         </StackPanel>
 
         <StackPanel Orientation="Vertical" Margin="0, 0,0, 35" HorizontalAlignment="Left">
