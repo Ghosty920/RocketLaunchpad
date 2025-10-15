@@ -13,6 +13,7 @@ public class Config
     public string LaunchArgs { get; set; } = "-language=INT";
     
     public bool CloseOnLaunch { get; set; } = false;
+    public bool ShowStatsPage { get; set; } = true;
     
     public static void Load()
     {

@@ -14,6 +14,7 @@ public partial class SettingsPage : UserControl
         GamePath.Text = Config.Instance.LaunchPath;
         LaunchArgs.Text = Config.Instance.LaunchArgs;
         CloseLaunchSwitch.IsChecked = Config.Instance.CloseOnLaunch;
+        ShowStatsSwitch.IsChecked = Config.Instance.ShowStatsPage;
     }
 
     private void BrowseLaunchPath_Click(object sender, RoutedEventArgs e)
@@ -64,6 +65,18 @@ public partial class SettingsPage : UserControl
     private void CloseLaunchSwitch_Off(object sender, RoutedEventArgs e)
     {
         Config.Instance.CloseOnLaunch = false;
+        Config.Save();
+    }
+    
+    private void ShowStatsSwitch_On(object sender, RoutedEventArgs e)
+    {
+        Config.Instance.ShowStatsPage = true;
+        Config.Save();
+    }
+    
+    private void ShowStatsSwitch_Off(object sender, RoutedEventArgs e)
+    {
+        Config.Instance.ShowStatsPage = false;
         Config.Save();
     }
 }
