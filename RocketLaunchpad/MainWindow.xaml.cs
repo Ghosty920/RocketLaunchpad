@@ -37,21 +37,49 @@ public partial class MainWindow : Window
             };
             border.Child = userText;
 
-            border.MouseLeftButtonDown += async (s, e) =>
-            {
-                MessageBox.Show($"Launching game with {acc.Username}");
-                try
-                {
-                    await Launcher.LaunchGame(acc);
-                }
-                catch (Exception exception)
-                {
-                    MessageBox.Show(exception.Message, "Launch Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            };
+            border.MouseLeftButtonDown += (s, e) => { LaunchAccount(acc); };
 
             var index = AccountListControl.Items.IndexOf(AddAccountButton);
             AccountListControl.Items.Insert(index, border);
+        }
+    }
+
+    private async void LaunchAccount(Account account)
+    {
+        var keepPopup = false;
+        try
+        {
+            RestorePopup(true);
+            PopupText.Text = $"Launching {account.Username} ...";
+            await Launcher.LaunchGame(account);
+        }
+        catch (LoginUtils.LoginRequestException exception)
+        {
+            Console.WriteLine(exception);
+            Console.WriteLine($"${exception.Code}: ${exception.Response?.ToString()}");
+
+            var continuationUrl = exception.Response?.GetProperty("continuationUrl");
+            if (continuationUrl is not null)
+            {
+                Console.WriteLine($"Continuing login at {continuationUrl}");
+                PopupText.Text = "Check your browser.";
+                keepPopup = true;
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = continuationUrl.ToString(),
+                    UseShellExecute = true
+                });
+                ShowPopupButton(() => LaunchAccount(account));
+            }
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine(exception);
+            MessageBox.Show(exception.Message, "Launch Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            if (!keepPopup) RestorePopup(false);
         }
     }
 
@@ -59,8 +87,9 @@ public partial class MainWindow : Window
     {
         try
         {
-            LoadingPopup.Visibility = Visibility.Visible;
-            var account = await AccountProcess.Login(LoadingText);
+            RestorePopup(true);
+            PopupText.Text = "Starting login process ...";
+            var account = await AccountProcess.Login(PopupText);
             if (account is null
                 or { AccountId: null }
                 or { AuthDeviceId: null }
@@ -71,12 +100,12 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
-            MessageBox.Show(exception.Message, "Login Failed", MessageBoxButton.OK, MessageBoxImage.Error);
             Console.WriteLine(exception);
+            MessageBox.Show(exception.Message, "Login Failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
-            LoadingPopup.Visibility = Visibility.Collapsed;
+            RestorePopup(false);
             RefreshAccounts();
         }
     }
@@ -101,7 +130,8 @@ public partial class MainWindow : Window
 
     private void UI_OpenSettings(object sender, MouseButtonEventArgs e)
     {
-        if (GridContent.Children[0] is SettingsPage) {
+        if (GridContent.Children[0] is SettingsPage)
+        {
             GridContent.Children.Clear();
             GridContent.Children.Add(new WelcomePage());
         }
@@ -110,5 +140,29 @@ public partial class MainWindow : Window
             GridContent.Children.Clear();
             GridContent.Children.Add(new SettingsPage());
         }
+    }
+
+    private Action? _doneAction;
+
+    private void ShowPopupButton(Action action)
+    {
+        _doneAction = action;
+        PopupProgressBar.Visibility = Visibility.Collapsed;
+        PopupButton.Visibility = Visibility.Visible;
+    }
+    
+    private void PopupButton_Click(object sender, RoutedEventArgs e)
+    {
+        _doneAction?.Invoke();
+        PopupButton.Visibility = Visibility.Collapsed;
+        PopupProgressBar.Visibility = Visibility.Visible;
+    }
+
+    private void RestorePopup(bool show)
+    {
+        _doneAction = null;
+        PopupContainer.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        PopupProgressBar.Visibility = Visibility.Visible;
+        PopupButton.Visibility = Visibility.Hidden;
     }
 }

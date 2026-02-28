@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using static RocketLaunchpad.Utils;
@@ -25,8 +26,8 @@ public static class LoginUtils
         request.Content = new StringContent(content, Encoding.UTF8, "application/x-www-form-urlencoded");
 
         var response = await Client.SendAsync(request);
-        if (response.StatusCode != System.Net.HttpStatusCode.OK)
-            return null;
+        if (response.StatusCode != HttpStatusCode.OK)
+            throw await LoginRequestException.FromResponse(response, "Oauth Token request failed.");
 
         var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
         return json;
@@ -47,10 +48,44 @@ public static class LoginUtils
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await Client.SendAsync(request);
-        if (response.StatusCode != System.Net.HttpStatusCode.OK)
-            return null;
+        if (response.StatusCode != HttpStatusCode.OK)
+            throw await LoginRequestException.FromResponse(response, "Oauth Exchange request failed.");
 
         var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
         return json.GetProperty("code").GetString();
+    }
+
+    public class LoginRequestException : Exception
+    {
+        public HttpStatusCode Code { get; }
+        public JsonElement? Response { get; }
+
+        public LoginRequestException(HttpStatusCode code, JsonElement response, string message)
+            : base(message)
+        {
+            Code = code;
+            Response = response;
+        }
+
+        public LoginRequestException(HttpStatusCode code, string response, string message)
+            : base(message)
+        {
+            Code = code;
+
+            try
+            {
+                Response = JsonDocument.Parse(response).RootElement.Clone();
+            }
+            catch
+            {
+                Response = null;
+            }
+        }
+
+        public static async Task<LoginRequestException> FromResponse(HttpResponseMessage response, string message)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            return new LoginRequestException(response.StatusCode, content, message);
+        }
     }
 }
