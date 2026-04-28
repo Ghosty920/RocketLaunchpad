@@ -15,11 +15,27 @@ public partial class App : Application
     {
         base.OnStartup(e);
         Config.Load();
-        
-        if (Config.Instance.LaunchPath == "") Config.Instance.LaunchPath = RocketLeaguePath();
-        if (File.Exists(Config.Instance.LaunchPath)) return;
 
-        MessageBox.Show("You must specify where RocketLeague.exe is located to use Rocket Launchpad.",
+        if (Config.Instance.LaunchPath == "") Config.Instance.LaunchPath = RocketLeaguePath();
+        if (File.Exists(Config.Instance.LaunchPath))
+        {
+            // check if the file name is correct
+            if (Config.Instance.LaunchPath.EndsWith("RocketLeague_EAC.exe"))
+                return;
+
+            // 28th April 2026, Rocket League added EAC - try to fix the path to use it
+            if (Config.Instance.LaunchPath.EndsWith("RocketLeague.exe"))
+            {
+                Config.Instance.LaunchPath =
+                    Config.Instance.LaunchPath.Substring(0, Config.Instance.LaunchPath.Length - 4) + "_EAC.exe";
+                Config.Save();
+                // check if the renamed file path exists
+                if(File.Exists(Config.Instance.LaunchPath)) return;
+            }
+            // if all checks failed, the file is prob wrong, so we'll ask for it again
+        }
+
+        MessageBox.Show("You must specify where RocketLeague_EAC.exe is located to use Rocket Launchpad.",
             "Rocket Launchpad", MessageBoxButton.OK, MessageBoxImage.Information);
         HarassUser();
     }
@@ -28,13 +44,14 @@ public partial class App : Application
     {
         var dialog = new OpenFileDialog
         {
-            Filter = "RocketLeague.exe|RocketLeague.exe",
-            Title = "Select RocketLeague.exe",
+            Filter = "RocketLeague_EAC.exe|RocketLeague_EAC.exe",
+            Title = "Select RocketLeague_EAC.exe",
         };
         var completed = dialog.ShowDialog();
         if (completed != true)
         {
-            MessageBox.Show("You must specify where RocketLeague.exe is located to use Rocket Launchpad. Exiting...",
+            MessageBox.Show(
+                "You must specify where RocketLeague_EAC.exe is located to use Rocket Launchpad. Exiting...",
                 "Rocket Launchpad", MessageBoxButton.OK, MessageBoxImage.Warning);
             Shutdown();
             return;
@@ -51,20 +68,21 @@ public partial class App : Application
                 HarassUser();
                 return;
             }
+
             Shutdown();
             return;
         }
 
-        Console.WriteLine("Set RocketLeague.exe path to: " + path);
+        Console.WriteLine("Set RocketLeague_EAC.exe path to: " + path);
         Config.Instance.LaunchPath = path;
         Config.Save();
     }
 
     private string RocketLeaguePath()
     {
-        var path = @"C:\Program Files\Epic Games\RocketLeague\Binaries\Win64\RocketLeague.exe";
+        var path = @"C:\Program Files\Epic Games\RocketLeague\Binaries\Win64\RocketLeague_EAC.exe";
         if (File.Exists(path)) return path;
-        path = @"C:\Program Files (x86)\Steam\steamapps\common\rocketleague\Binaries\Win64\RocketLeague.exe";
+        path = @"C:\Program Files (x86)\Steam\steamapps\common\rocketleague\Binaries\Win64\RocketLeague_EAC.exe";
         if (File.Exists(path)) return path;
         return "";
     }

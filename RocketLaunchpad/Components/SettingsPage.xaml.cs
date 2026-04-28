@@ -21,8 +21,8 @@ public partial class SettingsPage : UserControl
     {
         var dialog = new OpenFileDialog
         {
-            Filter = "RocketLeague.exe|RocketLeague.exe",
-            Title = "Select RocketLeague.exe",
+            Filter = "RocketLeague_EAC.exe|RocketLeague_EAC.exe",
+            Title = "Select RocketLeague_EAC.exe",
         };
         if (dialog.ShowDialog() != true) return;
 
@@ -35,7 +35,7 @@ public partial class SettingsPage : UserControl
             return;
         }
 
-        Console.WriteLine("Set RocketLeague.exe path to: " + path);
+        Console.WriteLine("Set RocketLeague_EAC.exe path to: " + path);
         Config.Instance.LaunchPath = path;
         Config.Save();
         GamePath.Text = path;
