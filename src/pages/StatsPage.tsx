@@ -3,26 +3,78 @@ import { Account } from '../types';
 import { useEffect, useState } from 'react';
 import LoadingDots from '../components/LoadingDots';
 
-async function getStats(account: Account): Promise<any> {
-	const storedItem = localStorage.getItem('stats_' + account.AccountId);
-	if (storedItem) {
-		const parsed = JSON.parse(storedItem);
-		const now = Date.now();
-		if (now <= parsed.expires) return parsed.data;
-		localStorage.removeItem('stats_' + account.AccountId);
+type CachedStats = {
+	data?: any;
+	expires?: number;
+	error?: { message: string; expires: number };
+};
+
+function getCacheKey(account: Account): string {
+	return `stats_${account.AccountId}`;
+}
+
+function readStatsCache(account: Account): CachedStats | null {
+	const storedItem = localStorage.getItem(getCacheKey(account));
+	if (!storedItem) return null;
+	try {
+		return JSON.parse(storedItem) as CachedStats;
+	} catch {
+		return null;
 	}
+}
 
-	const result = await invoke<any>('get_stats', { username: account.Username });
-	const data = JSON.parse(result).data;
+function writeStatsCache(account: Account, update: Partial<CachedStats>): CachedStats {
+	const existing = readStatsCache(account) ?? {};
+	const next = { ...existing, ...update };
+	localStorage.setItem(getCacheKey(account), JSON.stringify(next));
+	return next;
+}
 
-	localStorage.setItem(
-		'stats_' + account.AccountId,
-		JSON.stringify({
+function clearCacheError(account: Account): void {
+	const existing = readStatsCache(account);
+	if (!existing?.error) return;
+	const { error, ...rest } = existing;
+	localStorage.setItem(getCacheKey(account), JSON.stringify(rest));
+}
+
+function getCachedStats(account: Account): any | null {
+	return readStatsCache(account)?.data ?? null;
+}
+
+function getCachedErrorMessage(account: Account): string | null {
+	const cached = readStatsCache(account);
+	if (!cached?.error) return null;
+	return Date.now() <= cached.error.expires ? cached.error.message : null;
+}
+
+async function getStats(account: Account): Promise<any> {
+	const cached = readStatsCache(account);
+	const now = Date.now();
+	if (cached?.error && now <= cached.error.expires) {
+		throw new Error(cached.error.message || 'Cached error');
+	}
+	if (cached?.data && cached.expires && now <= cached.expires) return cached.data;
+
+	try {
+		const result = await invoke<any>('get_stats', { username: account.Username });
+		const data = JSON.parse(result).data;
+
+		writeStatsCache(account, {
 			data,
 			expires: new Date(data.expiryDate).getTime(),
-		})
-	);
-	return data;
+		});
+		clearCacheError(account);
+		return data;
+	} catch (err) {
+		const message = err instanceof Error ? err.toString() : String(err);
+		writeStatsCache(account, {
+			error: {
+				message,
+				expires: Date.now() + 10 * 1000,
+			},
+		});
+		throw err;
+	}
 }
 
 function getImage(url: string): string {
@@ -44,6 +96,7 @@ const playlistIds = {
 
 function PlaylistCard({ data, index }: { data: any; index: number }) {
 	const ranked = data?.attributes?.playlistId !== 0;
+	const rank = data?.stats?.rating?.rank;
 	const percentile = data?.stats?.rating?.percentile;
 	return (
 		<div
@@ -69,7 +122,7 @@ function PlaylistCard({ data, index }: { data: any; index: number }) {
 			<div className='flex flex-col'>
 				<div className='font-medium'>{data?.stats?.rating?.displayValue} MMR</div>
 				<div className={`font-light ${percentile >= 95 ? 'text-yellow-400' : 'text-stone-400'}`}>
-					#{data?.stats?.rating?.rank?.toLocaleString('en-US')} •{' '}
+					{rank ? `#${rank.toLocaleString('en-US')} • ` : null}
 					{percentile <= 50 ? `Bottom ${percentile.toFixed(1)}%` : `Top ${(100 - percentile).toFixed(1)}%`}
 				</div>
 			</div>
@@ -129,20 +182,55 @@ function StatsInfo({ data }: { data: any }) {
 export default function StatsPage({ account }: { account: Account }) {
 	const [stats, setStats] = useState<any>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [retryTick, setRetryTick] = useState(0);
 
 	useEffect(() => {
+		let cancelled = false;
+		const requestAccountId = account.AccountId;
+		const requestUsername = account.Username;
+
+		setStats(getCachedStats(account));
+		setError(getCachedErrorMessage(account));
+
 		getStats(account)
-			.then(setStats)
+			.then((data) => {
+				if (cancelled) return;
+				if (account.AccountId !== requestAccountId || account.Username !== requestUsername) return;
+				setStats(data);
+				setError(null);
+			})
 			.catch((err: Error) => {
+				if (cancelled) return;
+				if (account.AccountId !== requestAccountId || account.Username !== requestUsername) return;
 				console.error(err);
 				setError(err.toString());
 			});
-	}, [account]);
+
+		return () => {
+			cancelled = true;
+		};
+	}, [account.AccountId, account.Username, retryTick]);
+
+	const onRetryNow = () => {
+		clearCacheError(account);
+		setRetryTick((prev) => prev + 1);
+	};
 
 	return (
 		<div>
 			<h1 className='text-4xl font-bold mb-6'>Stats for {account.Username}</h1>
-			{error && <div className='text-red-300'>Error: {error}</div>}
+			{error && (
+				<div className='flex items-center gap-4'>
+					<div className='text-red-300'>Error: {error}</div>
+					<button
+						className='px-3 py-1 rounded bg-white/10 hover:bg-white/20 transition'
+						onClick={onRetryNow}
+						type='button'
+					>
+						Retry now
+					</button>
+				</div>
+			)}
 			{!stats && !error && <LoadingDots number={9} />}
 			{stats && <StatsInfo data={stats} />}
 		</div>
