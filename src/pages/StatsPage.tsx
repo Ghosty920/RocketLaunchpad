@@ -193,7 +193,7 @@ export default function StatsPage({ account }: { account: Account }) {
 		setError(getCachedErrorMessage(account));
 
 		getStats(account)
-			.then((data) => {
+			.then(data => {
 				if (cancelled) return;
 				if (account.AccountId !== requestAccountId || account.Username !== requestUsername) return;
 				setStats(data);
@@ -213,7 +213,7 @@ export default function StatsPage({ account }: { account: Account }) {
 
 	const onRetryNow = () => {
 		clearCacheError(account);
-		setRetryTick((prev) => prev + 1);
+		setRetryTick(prev => prev + 1);
 	};
 
 	return (

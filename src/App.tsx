@@ -1,12 +1,13 @@
-import { ReactElement, useEffect, useState } from 'react';
+import { ReactElement, useContext, useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import './App.css';
 import IntroPage from './pages/IntroPage';
-import Config from './pages/Config';
+import Config, { existsGamePath } from './pages/Config';
 import AccountElem, { AddAccount } from './components/Account';
 import { Account } from './types';
 import Modal from './components/Modal';
 import { X } from 'lucide-react';
+import { ConfigContext } from './ConfigProvider';
 
 function HeaderImage({
 	src,
@@ -44,12 +45,18 @@ export default function App() {
 	const [accounts, setAccounts] = useState<Account[] | null>(null);
 	const [launchingAccount, setLaunchingAccount] = useState<Account | null>(null);
 	const [launchError, setLaunchError] = useState<string | null>(null);
+	const { config } = useContext(ConfigContext)!;
 
 	useEffect(() => {
 		invoke<Account[]>('get_accounts').then((accounts: Account[]) => {
 			setAccounts(accounts);
 		});
 	}, []);
+
+	const switchPage = (page: React.ReactNode) => {
+		setPreviousShownPage(shownPage);
+		setShownPage(page);
+	};
 
 	const onAddAccount = async (account: Account) => {
 		await invoke('add_account', { account });
@@ -72,6 +79,11 @@ export default function App() {
 
 	const onLaunchAccount = async (account: Account, useEac: boolean) => {
 		if (launchingAccount) return;
+		if (!(await existsGamePath(config.LaunchPath))) {
+			setLaunchError('Game path is not set. Please set it in the settings page.');
+			switchPage(<Config />);
+			return;
+		}
 		setLaunchingAccount(account);
 		try {
 			await invoke('launch_game', { accountId: account.AccountId, useEac });
@@ -79,11 +91,6 @@ export default function App() {
 		} catch (error: any) {
 			setLaunchError(error.toString());
 		}
-	};
-
-	const switchPage = (page: React.ReactNode) => {
-		setPreviousShownPage(shownPage);
-		setShownPage(page);
 	};
 
 	const closeLaunchErrorModal = () => {
@@ -173,7 +180,9 @@ export default function App() {
 					Oh no! Launching <b>{launchingAccount?.Username}</b> failed. 😢
 				</p>
 				<p className='text-red-300'>{launchError}</p>
-				<p className='text-xs'>you might want to check your connection, or reconnect the account.</p>
+				{launchError?.startsWith('Game path') || (
+					<p className='text-xs'>you might want to check your connection, or reconnect the account.</p>
+				)}
 			</Modal>
 		</main>
 	);

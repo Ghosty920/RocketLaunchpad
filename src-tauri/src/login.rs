@@ -3,13 +3,13 @@ use crate::utils::{self, AUTH_CLIENT_ID, AUTH_TOKEN, parse_date};
 use base64::{Engine as _, engine::general_purpose};
 use reqwest::Client;
 use serde_json::Value;
-use tauri::WebviewWindowBuilder;
-use tauri::{AppHandle, Manager};
-use tokio::time::{Duration, sleep};
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
+use tauri::WebviewWindowBuilder;
+use tauri::{AppHandle, Manager};
+use tokio::time::{Duration, sleep};
 
 pub async fn login_and_add_account(
     app: &AppHandle,

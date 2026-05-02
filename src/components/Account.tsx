@@ -146,7 +146,7 @@ export default function AccountElem({
 		if (!showStats || pageShownIsThis) {
 			if (onLaunch) onLaunch(account, config.UseEac);
 		} else {
-			switchPage && switchPage(<StatsPage account={account} />);
+			if (switchPage) switchPage(<StatsPage account={account} />);
 		}
 	};
 

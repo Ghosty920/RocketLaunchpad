@@ -196,7 +196,7 @@ function MethodShareCode({
 					placeholder='Share code'
 					disabled={working}
 				/>
-				{false && (
+				{working && (
 					<div className='my-5'>
 						<LoadingDots number={7} />
 					</div>
