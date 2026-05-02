@@ -2,12 +2,12 @@ import { ReactElement, useContext, useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import './App.css';
 import IntroPage from './pages/IntroPage';
-import Config, { existsGamePath } from './pages/Config';
+import Config from './pages/Config';
 import AccountElem, { AddAccount } from './components/Account';
 import { Account } from './types';
 import Modal from './components/Modal';
 import { X } from 'lucide-react';
-import { ConfigContext } from './ConfigProvider';
+import { ConfigContext, existsGamePath } from './ConfigProvider';
 
 function HeaderImage({
 	src,

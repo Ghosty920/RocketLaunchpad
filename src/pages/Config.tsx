@@ -1,15 +1,10 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import { ConfigContext } from '../ConfigProvider';
+import { ConfigContext, existsGamePath } from '../ConfigProvider';
 import { invoke } from '@tauri-apps/api/core';
-import { exists } from '@tauri-apps/plugin-fs';
 import YesNoSwitch from '../components/YesNoSwitch';
 
 function ConfigBox({ children }: { children: React.ReactNode }) {
 	return <div className='bg-[#101010] border border-white/10 rounded-xl p-4'>{children}</div>;
-}
-
-export function existsGamePath(path: string): Promise<boolean> {
-	return exists(path + '\\RocketLeague.exe');
 }
 
 function GameLaunch() {
