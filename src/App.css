@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+
+@theme {
+	--font-bourgeois: 'Bourgeois', sans-serif;
+	--font-rubik: 'Rubik', sans-serif;
+}
+
+@font-face {
+	font-family: 'Bourgeois';
+	src: url('/fonts/Bourgeois-Medium.ttf') format('truetype');
+	font-weight: 500;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'Rubik';
+	src: url('/fonts/Rubik-Variable.ttf') format('truetype');
+	font-weight: 100 900;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'Rubik';
+	src: url('/fonts/Rubik-Italic-Variable.ttf') format('truetype');
+	font-weight: 100 900;
+	font-style: italic;
+}
+
+@keyframes rainbow {
+	from {
+		filter: hue-rotate(0deg);
+	}
+
+	to {
+		filter: hue-rotate(360deg);
+	}
+}
+
+@utility animate-rainbow {
+	animation: rainbow 3s linear infinite;
+}
+
+@keyframes dot-pulse {
+	0% {
+		transform: scale(0.8);
+		background-color: #b3d4fc;
+		box-shadow: 0 0 0 0 rgba(178, 212, 252, 0.7);
+	}
+
+	50% {
+		transform: scale(1.2);
+		background-color: #6793fb;
+		box-shadow: 0 0 0 10px rgba(178, 212, 252, 0);
+	}
+
+	100% {
+		transform: scale(0.8);
+		background-color: #b3d4fc;
+		box-shadow: 0 0 0 0 rgba(178, 212, 252, 0.7);
+	}
+}
+
+@utility animate-dot-pulse {
+	animation: dot-pulse 2.5s ease-in-out infinite;
+}
+
+/** Scrollbar */
+
+::-webkit-scrollbar {
+	width: 11px;
+}
+
+::-webkit-scrollbar-track {
+	background: #121212;
+}
+
+::-webkit-scrollbar-thumb {
+	background-color: #5b6063;
+	border: 3px solid #121212;
+	border-radius: 20px;
+}
+
+.darker-scroll::-webkit-scrollbar-track {
+	background: #090909;
+}
+
+.darker-scroll::-webkit-scrollbar-thumb {
+	background-color: #5b6063;
+	border: 3px solid #090909;
+	border-radius: 20px;
+}

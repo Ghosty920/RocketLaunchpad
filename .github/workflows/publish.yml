@@ -1,56 +1,42 @@
-﻿name: Publish
+name: Build
 
 on:
   push:
-    tags: [ "v*" ]
-    
-permissions:
-  contents: write
+    branches: ['master']
+  pull_request:
+    branches: ['master']
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set version variable
-        run: |
-          $version = $env:GITHUB_REF -replace 'refs/tags/v',''
-          Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version"
-          Write-Host "Version: $version"
-        shell: pwsh
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          dotnet-version: "9.0.x"
-        
-      - name: Restore dependencies
-        run: dotnet restore
+          version: latest
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Build
-        run: dotnet publish -c Release /p:Version=$env:VERSION /p:NuGetVersion=$env:VERSION --self-contained true --no-restore -o dist\out
-        shell: pwsh
-      - name: Remove language files
-        run: Get-ChildItem dist\out -Directory | Remove-Item -Recurse -Force
-        shell: pwsh
-      - name: Zip Release
-        run: Compress-Archive -Path dist\out\* -DestinationPath dist\RocketLaunchpad-$env:VERSION.zip
-        shell: pwsh
-        
-      - name: Install NSIS
-        uses: repolevedavaj/install-nsis@v1.0.3
-        with: 
-          nsis-version: "3.11"
-      - name: Create NSIS installer
-        run: |
-          (Get-Content dist\installer.nsi) -replace '\$\(VERSION\)', $env:VERSION | Set-Content "dist\installer.nsi"
-          makensis dist\installer.nsi
-        shell: pwsh
-        
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: Release ${{ github.ref_name }}
-          generate_release_notes: true
-          overwrite_files: true
-          draft: false
-          files: dist/RocketLaunchpad-${{ env.VERSION }}-Setup.exe,dist/RocketLaunchpad-${{ env.VERSION }}.zip
-          token: ${{ secrets.GITHUB_TOKEN }}
+          tagName: v__VERSION__
+          releaseName: Release v__VERSION__
+          releaseDraft: false
+          includeDebug: false

@@ -1,26 +1,50 @@
-﻿name: Build
+name: Build
 
 on:
   push:
-    branches: ["master"]
-  pull_request: 
-    branches: ["master"]
+    branches: ['master']
+  pull_request:
+    branches: ['master']
+  workflow_dispatch:
 
-jobs: 
+jobs:
   build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with: 
-          dotnet-version: "9.0.x"
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Build
-        run: dotnet build -c Debug --no-restore -o dist\out
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_STATS_WEBSITE_ID: ${{ env.VITE_STATS_WEBSITE_ID }}
+        with:
+          includeDebug: true
+          tauriScript: pnpm tauri
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
-        with: 
-          path: dist/out/
+        with:
+          name: RocketLaunchpad-windows
+          path: |
+            src-tauri/target/release/*.exe
+            src-tauri/target/release/*.dll
+            src-tauri/target/release/*.pdb
           retention-days: 90
