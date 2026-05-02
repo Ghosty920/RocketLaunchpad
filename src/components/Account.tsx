@@ -24,7 +24,7 @@ function Loading() {
 
 function ModalAccountShare({ accountId, open, onClose }: { accountId: string; open: boolean; onClose: () => void }) {
 	const copyBtnRef = useRef<HTMLButtonElement | null>(null);
-	const [copyAnimTimeout, setCopyAnimTimeout] = useState<number>();
+	const [copyAnimTimeout, setCopyAnimTimeout] = useState<NodeJS.Timeout>();
 	const [data, setData] = useState<string | null>(null);
 
 	useEffect(() => {

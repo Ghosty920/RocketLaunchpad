@@ -153,7 +153,7 @@ export default function App() {
 			</div>
 
 			{/* Content */}
-			<div className='h-full p-6 overflow-hidden @container'>{shownPage}</div>
+			<div className='h-full p-6 overflow-x-hidden overflow-y-scroll darker-scroll @container'>{shownPage}</div>
 
 			<Modal
 				open={!!launchError}

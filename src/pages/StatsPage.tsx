@@ -111,7 +111,7 @@ function StatsInfo({ data }: { data: any }) {
 		);
 	if (playlists.length === 0) return <div>No ranked data found for current season.</div>;
 	return (
-		<div className='grid grid-cols-[3rem_auto_auto_auto_auto] items-center gap-x-10 w-fit overflow-y-scroll darker-scroll'>
+		<div className='grid grid-cols-[3rem_auto_auto_auto_auto] items-center gap-x-10 w-fit'>
 			<div className={`grid grid-cols-subgrid col-span-5 gap-x-4 font-mono pb-2`}>
 				<div />
 				<div className='font-mono pb-2'>Playlist / Rank</div>

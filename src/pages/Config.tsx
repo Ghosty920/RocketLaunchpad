@@ -18,7 +18,7 @@ function GameLaunch() {
 	const [pathExists, setPathExists] = useState<boolean>(true);
 	const launchArgsRef = useRef<HTMLInputElement>(null);
 	const launchArgsBtnRef = useRef<HTMLButtonElement>(null);
-	const [launchArgsColorTimeout, setLaunchArgsColorTimeout] = useState<number | undefined>();
+	const [launchArgsColorTimeout, setLaunchArgsColorTimeout] = useState<NodeJS.Timeout>();
 	const [errorArgs, setErrorArgs] = useState<string | null>(null);
 	const [useEacError, setUseEacError] = useState<string | null>(null);
 
