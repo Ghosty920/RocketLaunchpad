@@ -1,8 +1,8 @@
+use crate::keychain::{KeychainError, keyring_entry};
 use aes_gcm::{
     Aes256Gcm, Key, KeyInit, Nonce,
     aead::{Aead, OsRng, rand_core::RngCore},
 };
-use keyring_core::Entry;
 
 pub fn encrypt(data: &[u8]) -> Result<Vec<u8>, CryptoError> {
     let cipher = get_key()?;
@@ -42,20 +42,19 @@ fn get_key() -> Result<Aes256Gcm, CryptoError> {
     Ok(Aes256Gcm::new(key))
 }
 
-fn keyring_entry() -> Result<Entry, CryptoError> {
-    Entry::new("RocketLaunchpad", "data").map_err(|e| CryptoError::Keyring(e.to_string()))
-}
-
 fn get_password() -> Result<[u8; 32], CryptoError> {
-    let entry = keyring_entry()?;
+    let entry = keyring_entry("data")
+        .map_err(|e| KeychainError::new(format!("Failed to access keyring: {e}")))?;
 
     // Try to load an existing key from the keyring
     if let Ok(stored) = entry.get_password() {
         let bytes = hex::decode(&stored)
-            .map_err(|e| CryptoError::Keyring(format!("Hex decode failed: {e}")))?;
+            .map_err(|e| KeychainError::new(format!("Hex decode failed: {e}")))?;
 
         return bytes.try_into().map_err(|_| {
-            CryptoError::Keyring("Stored key has wrong length (expected 32 bytes)".into())
+            CryptoError::Keyring(KeychainError::new(
+                "Stored key has wrong length (expected 32 bytes)",
+            ))
         });
     }
 
@@ -64,7 +63,7 @@ fn get_password() -> Result<[u8; 32], CryptoError> {
 
     entry
         .set_password(&hex::encode(key))
-        .map_err(|e| CryptoError::Keyring(format!("Failed to store key: {e}")))?;
+        .map_err(|e| KeychainError::new(format!("Failed to store key: {e}")))?;
 
     Ok(key.into())
 }
@@ -74,7 +73,7 @@ pub enum CryptoError {
     Encrypt(aes_gcm::Error),
     Decrypt(aes_gcm::Error),
     InvalidData(&'static str),
-    Keyring(String),
+    Keyring(KeychainError),
 }
 
 impl std::fmt::Display for CryptoError {
@@ -83,9 +82,15 @@ impl std::fmt::Display for CryptoError {
             CryptoError::Encrypt(e) => write!(f, "Encryption failed: {e}"),
             CryptoError::Decrypt(e) => write!(f, "Decryption failed: {e}"),
             CryptoError::InvalidData(msg) => write!(f, "Invalid data: {msg}"),
-            CryptoError::Keyring(msg) => write!(f, "Keyring error: {msg}"),
+            CryptoError::Keyring(e) => write!(f, "Keyring error: {e}"),
         }
     }
 }
 
 impl std::error::Error for CryptoError {}
+
+impl From<KeychainError> for CryptoError {
+    fn from(e: KeychainError) -> Self {
+        CryptoError::Keyring(e)
+    }
+}

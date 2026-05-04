@@ -12,6 +12,7 @@ use windows::Win32::UI::Controls::Dialogs::{
 mod account;
 mod config;
 mod crypt;
+mod keychain;
 mod launcher;
 mod login;
 mod utils;

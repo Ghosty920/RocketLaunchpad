@@ -15,7 +15,11 @@
 				"title": "Rocket Launchpad",
 				"backgroundColor": "#090909",
 				"width": 1100,
-				"height": 600
+				"height": 600,
+				"devtools": true,
+				"resizable": true,
+				"center": true,
+				"theme": "Dark"
 			}
 		],
 		"security": {
