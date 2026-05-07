@@ -40,7 +40,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VITE_STATS_WEBSITE_ID: ${{ secrets.VITE_STATS_WEBSITE_ID }}
+          VITE_STATS_WEBSITE_ID: ${{ vars.VITE_DEV_STATS_WEBSITE_ID }}
           VITE_GIT_SHA: ${{ env.GIT_SHA_SHORT }}
           VITE_BUILD_MODE: ${{ env.BUILD_MODE }}
         with:
