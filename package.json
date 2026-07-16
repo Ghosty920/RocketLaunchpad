@@ -56,7 +56,7 @@
 		"lint-staged": "^16.4.0",
 		"prettier": "^3.8.3",
 		"typescript": "~5.8.3",
-		"typescript-eslint": "^8.59.1",
+		"typescript-eslint": "^8.64.0",
 		"vite": "^7.3.2"
 	},
 	"packageManager": "pnpm@11.0.8+sha512.4c4097e1dd2d42372c4e7fa5a791ff28fc75a484c7ac192e64b1df0fdef17594ba982f9b4fed9adfb3c757846f565b799b2763fb3733d1de1bcb82cf46684912"
