@@ -34,7 +34,7 @@
 		"@tauri-apps/plugin-fs": "^2.5.0",
 		"@tauri-apps/plugin-opener": "^2.5.3",
 		"base-64": "^1.0.0",
-		"lucide-react": "^1.14.0",
+		"lucide-react": "^1.24.0",
 		"react": "^19.2.5",
 		"react-dom": "^19.2.5",
 		"tailwindcss": "^4.2.4",
