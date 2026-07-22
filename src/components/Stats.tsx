@@ -15,6 +15,14 @@ export default function Stats() {
 	const { config } = useContext(ConfigContext)!;
 	const configRef = useRef(config);
 
+	const umamiId = () => {
+		const current = localStorage.getItem('umami-id');
+		if (current) return current;
+		const newId = crypto.randomUUID();
+		localStorage.setItem('umami-id', newId);
+		return newId;
+	};
+
 	useEffect(() => {
 		configRef.current = config;
 	}, [config]);
@@ -33,9 +41,7 @@ export default function Stats() {
 			const { VITE_APP_VERSION, VITE_GIT_SHA, VITE_BUILD_MODE } = import.meta.env;
 
 			const refresh = () => {
-				const umami = (window as any).umami;
-
-				if (umami) {
+				if (window.umami) {
 					const { LaunchPath, ...settings } = configRef.current;
 					const changed = (Object.keys(settings) as (keyof ConfigNoPath)[]).some(
 						key => settings[key] !== lastSettings?.[key]
@@ -44,7 +50,7 @@ export default function Stats() {
 					console.log(settings, lastSettings);
 
 					if (changed) {
-						umami.identify({
+						window.umami.identify(umamiId(), {
 							...settings,
 							...(VITE_APP_VERSION ? { App_Version: VITE_APP_VERSION } : {}),
 							...(VITE_GIT_SHA ? { App_GitHash: VITE_GIT_SHA } : {}),
@@ -61,6 +67,13 @@ export default function Stats() {
 			setTimeout(refresh, 1000);
 		})();
 	}, [statsWebsiteId]);
+
+	useEffect(() => {
+		if (window.umami) {
+			console.log('Identifying stats with ID:', umamiId());
+			window.umami.identify(umamiId());
+		}
+	}, [window.umami]);
 
 	return null;
 }
