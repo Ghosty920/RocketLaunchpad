@@ -119,12 +119,16 @@ function PlaylistCard({ data, index }: { data: any; index: number }) {
 				)}
 			</div>
 			{/* Rating and percentile */}
-			<div className='flex flex-col'>
+			<div className='flex flex-col justify-center'>
 				<div className='font-medium'>{data?.stats?.rating?.displayValue} MMR</div>
-				<div className={`font-light ${percentile >= 95 ? 'text-yellow-400' : 'text-stone-400'}`}>
-					{rank ? `#${rank.toLocaleString('en-US')} • ` : null}
-					{percentile <= 50 ? `Bottom ${percentile.toFixed(1)}%` : `Top ${(100 - percentile).toFixed(1)}%`}
-				</div>
+				{percentile === undefined || isNaN(percentile) ? null : (
+					<div className={`font-light ${percentile >= 95 ? 'text-yellow-400' : 'text-stone-400'}`}>
+						{rank ? `#${rank.toLocaleString('en-US')} • ` : null}
+						{percentile <= 50
+							? `Bottom ${percentile.toFixed(1)}%`
+							: `Top ${(100 - percentile).toFixed(1)}%`}
+					</div>
+				)}
 			</div>
 			{/* Peak rating */}
 			<div className='flex flex-col justify-center font-semibold text-center'>
