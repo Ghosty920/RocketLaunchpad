@@ -37,6 +37,7 @@
 		"lucide-react": "^1.25.0",
 		"react": "^19.2.8",
 		"react-dom": "^19.2.8",
+		"react-toastify": "^11.1.0",
 		"tailwindcss": "^4.3.3",
 		"utf8": "^3.0.0"
 	},

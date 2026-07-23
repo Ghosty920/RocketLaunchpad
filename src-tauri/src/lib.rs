@@ -1,4 +1,5 @@
 use crate::account::AccountInfo;
+use crate::update::{UpdateInfo, check_for_update, download_update_and_run};
 use crate::utils::CLIENT;
 use account::Account;
 use config::{Config, ConfigUpdate};
@@ -15,6 +16,7 @@ mod crypt;
 mod keychain;
 mod launcher;
 mod login;
+mod update;
 mod utils;
 
 #[tauri::command]
@@ -133,6 +135,21 @@ async fn get_stats(_app: tauri::AppHandle, username: String) -> Result<String, S
     Ok(text)
 }
 
+#[tauri::command]
+async fn check_update(
+    _app: tauri::AppHandle,
+    version: String,
+) -> Result<Option<UpdateInfo>, String> {
+    check_for_update(version).await
+}
+
+#[tauri::command]
+async fn install_update(_app: tauri::AppHandle, url: String) -> Result<(), String> {
+    download_update_and_run(&url)
+        .await
+        .map_err(|e| format!("Failed to install update: {e}"))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "windows")]
@@ -156,7 +173,9 @@ pub fn run() {
             add_account,
             launch_game,
             login_account,
-            get_stats
+            get_stats,
+            check_update,
+            install_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

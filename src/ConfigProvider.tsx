@@ -6,6 +6,7 @@ import { exists } from '@tauri-apps/plugin-fs';
 type ConfigContextType = {
 	config: Config;
 	updateConfig: (patch: Partial<Config>) => Promise<void>;
+	firstLoaded?: boolean;
 };
 
 export function existsGamePath(path: string): Promise<boolean> {
@@ -21,7 +22,10 @@ export default function ConfigProvider({ children }: { children: React.ReactNode
 		CloseOnLaunch: false,
 		ShowStatsPage: true,
 		UseEac: true,
+		UpdateChecker: true,
 	});
+
+	const [firstLoaded, setFirstLoaded] = useState<boolean>(false);
 
 	async function updateConfig(patch: Partial<Config>) {
 		const newConfig = { ...config, ...patch };
@@ -41,6 +45,7 @@ export default function ConfigProvider({ children }: { children: React.ReactNode
 			.then(cfg => {
 				console.log('Loaded config:', cfg);
 				setConfig(cfg);
+				setFirstLoaded(true);
 				if (cfg.LaunchPath.length <= 1) checkForGamePath();
 			})
 			.catch(err => {
@@ -48,5 +53,5 @@ export default function ConfigProvider({ children }: { children: React.ReactNode
 			});
 	}, []);
 
-	return <ConfigContext.Provider value={{ config, updateConfig }}>{children}</ConfigContext.Provider>;
+	return <ConfigContext.Provider value={{ config, updateConfig, firstLoaded }}>{children}</ConfigContext.Provider>;
 }

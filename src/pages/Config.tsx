@@ -2,6 +2,8 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { ConfigContext, existsGamePath } from '../ConfigProvider';
 import { invoke } from '@tauri-apps/api/core';
 import YesNoSwitch from '../components/YesNoSwitch';
+import { toast } from 'react-toastify';
+import { checkForUpdates } from '../components/Updater';
 
 function ConfigBox({ children }: { children: React.ReactNode }) {
 	return <div className='bg-[#101010] border border-white/10 rounded-xl p-4'>{children}</div>;
@@ -167,6 +169,59 @@ function AppOptions() {
 	);
 }
 
+function UpdateChecker() {
+	const { config, updateConfig } = useContext(ConfigContext)!;
+	const [checkError, setCheckError] = useState<string | null>(null);
+
+	const saveUpdateChecker = (value: boolean) => {
+		setCheckError(null);
+		updateConfig({ UpdateChecker: value }).catch(err => {
+			console.error('Error saving update checker setting:', err);
+			setCheckError(err ? String(err) : 'An unknown error occurred while saving the setting.');
+		});
+	};
+
+	const checkUpdates = async () => {
+		setCheckError(null);
+		try {
+			const info = await checkForUpdates();
+			if (!info) {
+				toast("You're on the latest version!", {
+					position: 'bottom-right',
+					autoClose: 5000,
+					closeOnClick: true,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+					theme: 'dark',
+					ariaLabel: 'No updates available',
+					className: 'bg-neutral-900 border border-neutral-700 rounded-xl',
+				});
+				return;
+			}
+		} catch (err) {
+			console.error('Error checking for update:', err);
+			setCheckError(err ? String(err) : 'An unknown error occurred while checking for updates.');
+		}
+	};
+
+	return (
+		<ConfigBox>
+			<div className='mt-2 flex items-center gap-3'>
+				<label className='text-2xl text-white'>Automatically check for Updates:</label>
+				<YesNoSwitch state={config.UpdateChecker} setState={saveUpdateChecker} size={9} />
+			</div>
+			<button
+				onClick={checkUpdates}
+				className='px-4 py-2 rounded-md text-base font-medium transition-all duration-400 border-2 border-blue-400/0 hover:border-blue-600/70 bg-white/10 hover:bg-white/30'
+			>
+				Check Now
+			</button>
+			<p className='text-red-300'>{checkError}</p>
+		</ConfigBox>
+	);
+}
+
 export default function Config() {
 	return (
 		<div className='h-full grid grid-rows-[auto_1fr_auto] gap-5'>
@@ -178,6 +233,8 @@ export default function Config() {
 				<GameLaunch />
 				<br className='h-8' />
 				<AppOptions />
+				<br className='h-8' />
+				<UpdateChecker />
 			</div>
 		</div>
 	);

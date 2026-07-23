@@ -8,6 +8,7 @@ import { Account } from './types';
 import Modal from './components/Modal';
 import { X } from 'lucide-react';
 import { ConfigContext, existsGamePath } from './ConfigProvider';
+import { checkForUpdates } from './components/Updater';
 
 function HeaderImage({
 	src,
@@ -45,13 +46,19 @@ export default function App() {
 	const [accounts, setAccounts] = useState<Account[] | null>(null);
 	const [launchingAccount, setLaunchingAccount] = useState<Account | null>(null);
 	const [launchError, setLaunchError] = useState<string | null>(null);
-	const { config } = useContext(ConfigContext)!;
+	const { config, firstLoaded: configFirstLoaded } = useContext(ConfigContext)!;
 
 	useEffect(() => {
 		invoke<Account[]>('get_accounts').then((accounts: Account[]) => {
 			setAccounts(accounts);
 		});
 	}, []);
+
+	useEffect(() => {
+		if (!configFirstLoaded) return;
+		if (!config.UpdateChecker) return;
+		checkForUpdates();
+	}, [configFirstLoaded]);
 
 	const switchPage = (page: React.ReactNode) => {
 		setPreviousShownPage(shownPage);

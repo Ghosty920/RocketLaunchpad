@@ -16,6 +16,8 @@ pub struct Config {
     pub show_stats_page: bool,
     #[serde(default)]
     pub use_eac: bool,
+    #[serde(default)]
+    pub update_checker: bool,
 }
 
 impl Default for Config {
@@ -26,6 +28,7 @@ impl Default for Config {
             close_on_launch: false,
             show_stats_page: true,
             use_eac: true,
+            update_checker: true,
         }
     }
 }
@@ -38,6 +41,7 @@ pub struct ConfigUpdate {
     pub close_on_launch: Option<bool>,
     pub show_stats_page: Option<bool>,
     pub use_eac: Option<bool>,
+    pub update_checker: Option<bool>,
 }
 
 pub fn config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -55,6 +59,7 @@ pub fn merge_config(existing: Config, incoming: ConfigUpdate) -> Config {
         close_on_launch: incoming.close_on_launch.unwrap_or(existing.close_on_launch),
         show_stats_page: incoming.show_stats_page.unwrap_or(existing.show_stats_page),
         use_eac: incoming.use_eac.unwrap_or(existing.use_eac),
+        update_checker: incoming.update_checker.unwrap_or(existing.update_checker),
     }
 }
 

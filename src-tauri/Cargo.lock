@@ -3344,6 +3344,7 @@ dependencies = [
  "aes-gcm",
  "base64 0.22.1",
  "chrono",
+ "futures-util",
  "hex",
  "keyring-core",
  "open",
@@ -3359,6 +3360,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tokio",
  "urlencoding",
+ "uuid",
  "windows 0.62.2",
  "windows-native-keyring-store",
 ]
@@ -4526,9 +4528,23 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
+ "parking_lot",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
+ "tokio-macros",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6328af13490e73a9b4694030fafd93f8c8c6a9dede33e821c3fc63eddf8042ba"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
 ]
 
 [[package]]

@@ -4,6 +4,7 @@ export type Config = {
 	CloseOnLaunch: boolean;
 	ShowStatsPage: boolean;
 	UseEac: boolean;
+	UpdateChecker: boolean;
 };
 
 export type Account = {
