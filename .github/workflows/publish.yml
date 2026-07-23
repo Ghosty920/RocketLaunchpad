@@ -48,3 +48,4 @@ jobs:
           releaseName: Release v__VERSION__
           releaseDraft: false
           includeDebug: false
+          generateReleaseNotes: true
