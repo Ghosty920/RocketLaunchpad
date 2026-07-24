@@ -3,6 +3,14 @@
 @theme {
 	--font-bourgeois: 'Bourgeois', sans-serif;
 	--font-rubik: 'Rubik', sans-serif;
+	--font-nunito: 'Nunito', sans-serif;
+}
+
+@font-face {
+	font-family: 'Bourgeois';
+	src: url('/fonts/Bourgeois-Thin.ttf') format('truetype');
+	font-weight: 100;
+	font-style: normal;
 }
 
 @font-face {
@@ -26,6 +34,14 @@
 	font-style: italic;
 }
 
+@font-face {
+	font-family: 'Nunito';
+	src: url('/fonts/Nunito-Variable-numbers.ttf') format('truetype');
+	font-weight: 100 900;
+	font-style: normal;
+	unicode-range: U+0030-0039;
+}
+
 @keyframes rainbow {
 	from {
 		filter: hue-rotate(0deg);
@@ -33,6 +49,24 @@
 
 	to {
 		filter: hue-rotate(360deg);
+	}
+}
+
+@keyframes appear {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes disappear {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
 	}
 }
 
@@ -88,4 +122,9 @@
 	background-color: #5b6063;
 	border: 3px solid #090909;
 	border-radius: 20px;
+}
+
+.team-name::after {
+	@apply content-[''] absolute -left-3.5 top-0 w-[180%] h-20 pointer-events-none select-none;
+	background: radial-gradient(ellipse at center, var(--team-color), transparent 70%), transparent;
 }

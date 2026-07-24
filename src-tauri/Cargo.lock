@@ -3342,6 +3342,7 @@ name = "rocket-launchpad"
 version = "1.0.0"
 dependencies = [
  "aes-gcm",
+ "anyhow",
  "base64 0.22.1",
  "chrono",
  "futures-util",

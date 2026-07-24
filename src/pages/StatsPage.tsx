@@ -1,98 +1,16 @@
-import { invoke } from '@tauri-apps/api/core';
 import { Account } from '../types';
 import { useEffect, useState } from 'react';
 import LoadingDots from '../components/LoadingDots';
-
-type CachedStats = {
-	data?: any;
-	expires?: number;
-	error?: { message: string; expires: number };
-};
-
-function getCacheKey(account: Account): string {
-	return `stats_${account.AccountId}`;
-}
-
-function readStatsCache(account: Account): CachedStats | null {
-	const storedItem = localStorage.getItem(getCacheKey(account));
-	if (!storedItem) return null;
-	try {
-		return JSON.parse(storedItem) as CachedStats;
-	} catch {
-		return null;
-	}
-}
-
-function writeStatsCache(account: Account, update: Partial<CachedStats>): CachedStats {
-	const existing = readStatsCache(account) ?? {};
-	const next = { ...existing, ...update };
-	localStorage.setItem(getCacheKey(account), JSON.stringify(next));
-	return next;
-}
-
-function clearCacheError(account: Account): void {
-	const existing = readStatsCache(account);
-	if (!existing?.error) return;
-	const { error, ...rest } = existing;
-	localStorage.setItem(getCacheKey(account), JSON.stringify(rest));
-}
-
-function getCachedStats(account: Account): any | null {
-	return readStatsCache(account)?.data ?? null;
-}
-
-function getCachedErrorMessage(account: Account): string | null {
-	const cached = readStatsCache(account);
-	if (!cached?.error) return null;
-	return Date.now() <= cached.error.expires ? cached.error.message : null;
-}
-
-async function getStats(account: Account): Promise<any> {
-	const cached = readStatsCache(account);
-	const now = Date.now();
-	if (cached?.error && now <= cached.error.expires) {
-		throw new Error(cached.error.message || 'Cached error');
-	}
-	if (cached?.data && cached.expires && now <= cached.expires) return cached.data;
-
-	try {
-		const result = await invoke<any>('get_stats', { username: account.Username });
-		const data = JSON.parse(result).data;
-
-		writeStatsCache(account, {
-			data,
-			expires: new Date(data.expiryDate).getTime(),
-		});
-		clearCacheError(account);
-		return data;
-	} catch (err) {
-		const message = err instanceof Error ? err.toString() : String(err);
-		writeStatsCache(account, {
-			error: {
-				message,
-				expires: Date.now() + 10 * 1000,
-			},
-		});
-		throw err;
-	}
-}
-
-function getImage(url: string): string {
-	return 'ranks/' + url.split('/').slice(-1)[0];
-}
-
-const playlistIds = {
-	0: 'Casual',
-	10: '1v1',
-	11: '2v2',
-	13: '3v3',
-	61: '4v4',
-	27: 'Hoops',
-	28: 'Rumble',
-	29: 'Dropshot',
-	30: 'Snowday',
-	34: 'Tournament',
-} satisfies Record<number, string>;
+import {
+	clearCacheError,
+	getAccountAsPartialPlayer,
+	getCachedErrorMessage,
+	getCachedStats,
+	getRankImage,
+	getStats,
+	playlistIds,
+} from '../lib/accountStats';
+import { PartialPlayer } from './LiveGame';
 
 function PlaylistCard({ data, index }: { data: any; index: number }) {
 	const ranked = data?.attributes?.playlistId !== 0;
@@ -105,7 +23,7 @@ function PlaylistCard({ data, index }: { data: any; index: number }) {
 			{/* Icon */}
 			<img
 				className='w-12 h-12 ml-3'
-				src={getImage(data?.stats?.tier?.metadata?.iconUrl)}
+				src={getRankImage(data?.stats?.tier?.metadata?.iconUrl)}
 				alt={data?.stats?.tier?.metadata?.name}
 				aria-label={data?.stats?.tier?.metadata?.name}
 			/>
@@ -183,29 +101,33 @@ function StatsInfo({ data }: { data: any }) {
 	);
 }
 
-export default function StatsPage({ account }: { account: Account }) {
+export default function StatsPage({ account }: { account: Account | PartialPlayer }) {
+	if ('Username' in account) return <StatsPage account={getAccountAsPartialPlayer(account)} />;
+
+	const accountId = account.PrimaryId.split('|')[1];
+
 	const [stats, setStats] = useState<any>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [retryTick, setRetryTick] = useState(0);
 
 	useEffect(() => {
 		let cancelled = false;
-		const requestAccountId = account.AccountId;
-		const requestUsername = account.Username;
+		const requestAccountId = accountId;
+		const requestUsername = account.Name;
 
-		setStats(getCachedStats(account));
-		setError(getCachedErrorMessage(account));
+		setStats(getCachedStats(accountId));
+		setError(getCachedErrorMessage(accountId));
 
 		getStats(account)
 			.then(data => {
 				if (cancelled) return;
-				if (account.AccountId !== requestAccountId || account.Username !== requestUsername) return;
+				if (accountId !== requestAccountId || account.Name !== requestUsername) return;
 				setStats(data);
 				setError(null);
 			})
 			.catch((err: Error) => {
 				if (cancelled) return;
-				if (account.AccountId !== requestAccountId || account.Username !== requestUsername) return;
+				if (accountId !== requestAccountId || account.Name !== requestUsername) return;
 				console.error(err);
 				setError(err.toString());
 			});
@@ -213,16 +135,16 @@ export default function StatsPage({ account }: { account: Account }) {
 		return () => {
 			cancelled = true;
 		};
-	}, [account.AccountId, account.Username, retryTick]);
+	}, [accountId, account.Name, retryTick]);
 
 	const onRetryNow = () => {
-		clearCacheError(account);
+		clearCacheError(accountId);
 		setRetryTick(prev => prev + 1);
 	};
 
 	return (
 		<div>
-			<h1 className='text-4xl font-bold mb-6'>Stats for {account.Username}</h1>
+			<h1 className='text-4xl font-bold mb-6'>Stats for {account.Name}</h1>
 			{error && (
 				<div className='flex items-center gap-4'>
 					<div className='text-red-300'>Error: {error}</div>

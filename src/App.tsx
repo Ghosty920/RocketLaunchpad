@@ -9,6 +9,7 @@ import Modal from './components/Modal';
 import { X } from 'lucide-react';
 import { ConfigContext, existsGamePath } from './ConfigProvider';
 import { checkForUpdates } from './components/Updater';
+import LiveGame from './pages/LiveGame';
 
 function HeaderImage({
 	src,
@@ -105,6 +106,15 @@ export default function App() {
 		setLaunchingAccount(null);
 	};
 
+	const openLiveGamePage = () => {
+		const pageShownIsThis = shownPage && (shownPage as ReactElement).type === LiveGame;
+		if (pageShownIsThis) {
+			switchPage(previousShownPage);
+		} else {
+			switchPage(<LiveGame switchPage={switchPage} />);
+		}
+	};
+
 	return (
 		<main
 			onContextMenu={e => e.preventDefault()}
@@ -140,6 +150,11 @@ export default function App() {
 							}}
 							className='hover:rotate-30'
 						/>
+					</div>
+					<div className='flex flex-col w-full py-3 px-4 items-center' onClick={openLiveGamePage}>
+						<button className='text-2xl font-medium px-4 h-14 bg-[#34339e] hover:bg-[#4a49c0] rounded-xl flex items-center justify-center cursor-pointer duration-400 transition-all hover:scale-105 hover:drop-shadow-[0_0_4px_#4a49c0]'>
+							Live Game
+						</button>
 					</div>
 				</div>
 

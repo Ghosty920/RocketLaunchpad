@@ -16,6 +16,7 @@ mod crypt;
 mod keychain;
 mod launcher;
 mod login;
+mod stats_api;
 mod update;
 mod utils;
 
@@ -105,10 +106,14 @@ async fn login_account(app: tauri::AppHandle, open_in_window: bool) -> Result<Ac
 }
 
 #[tauri::command]
-async fn get_stats(_app: tauri::AppHandle, username: String) -> Result<String, String> {
+async fn get_stats(
+    _app: tauri::AppHandle,
+    username: String,
+    platform: String,
+) -> Result<String, String> {
     let url = format!(
-        //"http://192.168.1.150",
-        "https://api.tracker.gg/api/v2/rocket-league/standard/profile/epic/{}",
+        "https://api.tracker.gg/api/v2/rocket-league/standard/profile/{}/{}",
+        platform,
         urlencoding::encode(&username)
     );
 
@@ -163,6 +168,10 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .setup(|app| {
+            stats_api::start_stats_listener(app.handle().clone());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             get_config,
             update_config,
@@ -175,7 +184,7 @@ pub fn run() {
             login_account,
             get_stats,
             check_update,
-            install_update,
+            install_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
