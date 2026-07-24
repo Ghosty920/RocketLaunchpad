@@ -4,6 +4,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import StatsPage from './StatsPage';
 import { getRankImage, getStats } from '../lib/accountStats';
 import { lerpHsl } from '../lib/colors';
+import LoadingDots from '../components/LoadingDots';
 
 export type PartialPlayer = {
 	Name: string;
@@ -277,6 +278,16 @@ export default function LiveGame({ switchPage }: { switchPage: (page: React.Reac
 	const [players, setPlayers] = useState<Payload['Players'] | null>(null);
 	const [winner, setWinner] = useState<number | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
+
+	useEffect(() => {
+		const timeout = setTimeout(() => {
+			setIsSlowLoading(true);
+		}, 2000);
+		return () => {
+			clearTimeout(timeout);
+		};
+	}, []);
 
 	useEffect(() => {
 		const unlisten = listen<Payload>('stats-update', event => {
@@ -373,6 +384,21 @@ export default function LiveGame({ switchPage }: { switchPage: (page: React.Reac
 					</div>
 				</div>
 			))}
+			{(!teams || teams?.length === 0) && !error && (
+				<>
+					<LoadingDots number={9} />
+					{isSlowLoading && (
+						<>
+							<p className='text-lg text-gray-400 mt-8'>
+								If you don't see anything yet, either you're not in a match/replay,
+							</p>
+							<p className='text-lg text-gray-400'>
+								or you may have to restart your game for API settings to apply.
+							</p>
+						</>
+					)}
+				</>
+			)}
 			{error && <div className='text-red-500 font-bold text-lg'>Error: {error}</div>}
 		</div>
 	);
