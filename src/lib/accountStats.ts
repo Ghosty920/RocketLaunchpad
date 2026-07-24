@@ -79,9 +79,11 @@ export async function getStats(account: Account | PartialPlayer): Promise<any> {
 	if (cached?.data && cached.expires && now <= cached.expires) return cached.data;
 
 	try {
+		const platform = getPlatformFromPrimaryId(account.PrimaryId);
+		const username = platform === 'steam' ? accountId : account.Name;
 		const result = await invoke<any>('get_stats', {
-			username: account.Name,
-			platform: getPlatformFromPrimaryId(account.PrimaryId),
+			username,
+			platform,
 		});
 		const data = JSON.parse(result).data;
 

@@ -298,7 +298,7 @@ export default function LiveGame({ switchPage }: { switchPage: (page: React.Reac
 			if ((!winner || matchChanged) && Game.bHasWinner) {
 				const winningTeam = getWinningTeam(event.payload);
 				setWinner(winningTeam.TeamNum);
-				alert(winningTeam.Name);
+				console.log('Winner:', winningTeam.Name);
 			}
 			//
 		})
