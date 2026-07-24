@@ -64,7 +64,6 @@ export function getPlatformFromPrimaryId(primaryId: string): string {
 }
 
 export async function getStats(account: Account | PartialPlayer): Promise<any> {
-	throw new Error('hi');
 	if ('Username' in account) return getStats(getAccountAsPartialPlayer(account));
 	const accountId = account.PrimaryId.split('|')[1];
 
