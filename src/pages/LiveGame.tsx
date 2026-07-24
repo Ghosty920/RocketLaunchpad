@@ -292,6 +292,7 @@ export default function LiveGame({ switchPage }: { switchPage: (page: React.Reac
 	useEffect(() => {
 		const unlisten = listen<Payload>('stats-update', event => {
 			const { Game, Players, MatchGuid } = event.payload;
+			if (MatchGuid === '') return; // freeplay
 			const matchChanged = MatchGuid !== matchGuid;
 
 			if (!Game.bHasWinner) {
