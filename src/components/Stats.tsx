@@ -46,8 +46,6 @@ export default function Stats() {
 					const changed = (Object.keys(settings) as (keyof ConfigNoPath)[]).some(
 						key => settings[key] !== lastSettings?.[key]
 					);
-					console.log(changed);
-					console.log(settings, lastSettings);
 
 					if (changed) {
 						window.umami.identify(umamiId(), {
