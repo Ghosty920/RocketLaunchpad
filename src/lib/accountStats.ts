@@ -60,16 +60,13 @@ export function getPlatformFromPrimaryId(primaryId: string): string {
 	if (raw.startsWith('ps')) return 'psn';
 	if (raw.startsWith('xb')) return 'xbl';
 	if (raw.startsWith('sw')) return 'switch';
+	console.log('Unknown platform for primaryId:', primaryId);
 	return 'epic'; // simple fallback
 }
 
 export async function getStats(account: Account | PartialPlayer): Promise<any> {
 	if ('Username' in account) return getStats(getAccountAsPartialPlayer(account));
 	const accountId = account.PrimaryId.split('|')[1];
-
-	if (!account.PrimaryId.startsWith('Epic|')) {
-		console.log({ name: account.Name, id: account.PrimaryId });
-	}
 
 	const cached = readStatsCache(accountId);
 	const now = Date.now();
