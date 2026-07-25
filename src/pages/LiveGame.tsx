@@ -1,5 +1,5 @@
 import { listen } from '@tauri-apps/api/event';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatsPage from './StatsPage';
 import { getRankImage, getStats } from '../lib/accountStats';
@@ -141,18 +141,21 @@ function PlayerLineStats({
 	stats,
 	player,
 	background,
+	error,
 }: {
 	stats: any;
 	player: Payload['Players'][number];
-	background?: string;
+	background: string;
+	error: string | null;
 }) {
-	if (!stats)
+	if (error)
 		return (
-			<>
-				<div></div>
-				<div></div>
-				<div></div>
-			</>
+			<div
+				className='h-full leading-12 flex items-center text-red-500 font-medium text-lg'
+				style={{ background, gridColumn: '3 / -1' }}
+			>
+				Error: {error}
+			</div>
 		);
 
 	const overviewSegment = stats?.segments?.find((s: any) => s.type === 'overview');
@@ -178,17 +181,21 @@ function PlayerLineStats({
 
 	return (
 		<>
-			<div className='h-12 text-lg font-medium leading-12 text-neutral-400 text-center' style={{ background }}>
+			<div className='h-full text-lg font-medium leading-12 text-neutral-400 text-center' style={{ background }}>
 				Score: {player.Score}
 			</div>
-			<div className='h-12 text-lg font-medium leading-12 text-center' style={{ background }}>
+			<div className='h-full text-lg font-medium leading-12 text-center' style={{ background }}>
 				<span style={{ color: goalsColor }}>{player.Goals}</span>/
 				<span className='text-gray-400'>{player.Shots}</span> Goal{player.Goals > 1 ? 's' : ''}
 			</div>
-			<div className='h-12 leading-12 text-center flex flex-col justify-center' style={{ background }}>
-				<div className={`${winsColor} text-base font-medium`}>{wins} wins</div>
-				<div className={`text-yellow-500/50 text-sm`}>{mvps} MVPs</div>
-			</div>
+			{stats ? (
+				<div className='h-full leading-12 text-center flex flex-col justify-center' style={{ background }}>
+					<div className={`${winsColor} text-base font-medium`}>{wins} wins</div>
+					<div className={`text-yellow-500/50 text-sm`}>{mvps} MVPs</div>
+				</div>
+			) : (
+				<div className='h-full w-full' style={{ background }}></div>
+			)}
 		</>
 	);
 }
@@ -204,22 +211,27 @@ function PlayerLine({
 }) {
 	const [stats, setStats] = useState<any>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [isBot, setIsBot] = useState<boolean>(false);
 
 	const [cancelled, setCancelled] = useState(false);
 
 	function fetchStats() {
 		if (cancelled) return;
 		setError(null);
-		getStats(player)
-			.then(data => {
-				if (cancelled) return;
-				setStats(data);
-			})
-			.catch((err: Error) => {
-				if (cancelled) return;
-				console.error(err);
-				setError(err.toString());
-			});
+
+		if (player.PrimaryId.startsWith('Unknown')) setIsBot(true);
+		else {
+			getStats(player)
+				.then(data => {
+					if (cancelled) return;
+					setStats(data);
+				})
+				.catch((err: Error) => {
+					if (cancelled) return;
+					console.error(err);
+					setError(err.toString());
+				});
+		}
 	}
 
 	useEffect(() => {
@@ -235,8 +247,8 @@ function PlayerLine({
 	return (
 		<div className='contents'>
 			<div className='h-12 flex flex-col items-center justify-center' style={{ background }}>
-				{!stats && !error && <LoadingSpinner size={12 * 4} />}
-				{stats && <img src={getHighestRank(stats)} className='w-10 h-10' />}
+				{!stats && !error && !isBot && <LoadingSpinner size={12 * 4} />}
+				{stats && <img src={getHighestRank(stats)} className='w-10 h-10 hover:saturate-180' />}
 				{error && (
 					<button
 						className='w-10 h-10 bg-[linear-gradient(115deg,#74252c,#e45858,#e98b8b)] hover:bg-[linear-gradient(115deg,#a04b52,#f08989,#f1bbbb)]'
@@ -247,30 +259,38 @@ function PlayerLine({
 						onClick={fetchStats}
 					/>
 				)}
+				{isBot && (
+					<div
+						className='w-10 h-10 bg-[linear-gradient(132deg,#030712,#9ca3af,#e5e7eb)] hover:bg-[linear-gradient(135deg,#1f2937,#cbd5e1,#ffffff)]'
+						style={{
+							mask: `url("/icons/robot.svg") center/contain no-repeat`,
+							WebkitMask: `url("/icons/robot.svg") center/contain no-repeat`,
+						}}
+					/>
+				)}
 			</div>
 			<div
-				className='text-xl h-12 leading-12 hover:underline hover:cursor-pointer'
+				className={`text-xl h-full leading-12 ${isBot ? 'cursor-default' : 'hover:underline cursor-pointer'}`}
 				style={{ background }}
-				onClick={() => switchPage(<StatsPage account={player} />)}
+				onClick={() => !isBot && switchPage(<StatsPage account={player} />)}
 			>
 				{player.Name}
 			</div>
 
-			<PlayerLineStats stats={stats} player={player} background={background} />
-
-			{error && (
-				<>
-					<span
-						className='text-red-500 h-12 leading-12 font-medium text-lg'
-						style={{ gridColumn: '2 / -1', background }}
-					>
-						Error: {error}
-					</span>
-				</>
-			)}
+			<PlayerLineStats stats={stats} player={player} background={background} error={error} />
 		</div>
 	);
 }
+
+const CACHE_TTL_MS = 60 * 1000;
+type CachedState = {
+	matchGuid: string | null;
+	teams: Payload['Game']['Teams'] | null;
+	players: Payload['Players'] | null;
+	winner: number | null;
+	timestamp: number;
+};
+let stateCache: CachedState | null = null;
 
 export default function LiveGame({ switchPage }: { switchPage: (page: React.ReactElement) => void }) {
 	const [matchGuid, setMatchGuid] = useState<string | null>(null);
@@ -279,6 +299,22 @@ export default function LiveGame({ switchPage }: { switchPage: (page: React.Reac
 	const [winner, setWinner] = useState<number | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
+	const stateRef = useRef({ matchGuid, teams, players, winner });
+
+	useEffect(() => {
+		stateRef.current = { matchGuid, teams, players, winner };
+	}, [matchGuid, teams, players, winner]);
+
+	useEffect(() => {
+		const cachedState = stateCache && stateCache.timestamp + CACHE_TTL_MS > Date.now() ? stateCache : null;
+		if (!cachedState) return;
+		console.log('Restored cached live game state:', cachedState);
+
+		setMatchGuid(cachedState?.matchGuid ?? null);
+		setTeams(cachedState?.teams ?? null);
+		setPlayers(cachedState?.players ?? null);
+		setWinner(cachedState?.winner ?? null);
+	}, []);
 
 	useEffect(() => {
 		const timeout = setTimeout(() => {
@@ -324,6 +360,13 @@ export default function LiveGame({ switchPage }: { switchPage: (page: React.Reac
 			});
 		return () => {
 			unlisten.then(fn => fn());
+
+			// set the cache
+			stateCache = {
+				...stateRef.current,
+				timestamp: Date.now(),
+			};
+			console.log('Saved live game state:', stateCache);
 		};
 	}, []);
 
