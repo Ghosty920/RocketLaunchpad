@@ -176,8 +176,18 @@ function PlayerLineStats({
 							? 'text-yellow-100'
 							: 'text-white';
 
+	const goalsRatio = player.Shots > 0 ? player.Goals / Math.max(1, player.Shots) : 0;
 	const goalsColor =
-		player.Shots === 0 ? '#bbbbbb' : lerpHsl('#ff2222', '#22ff22', player.Goals / Math.max(1, player.Shots));
+		player.Shots === 0
+			? '#bbbbbb'
+			: lerpHsl(
+					'#ff2222',
+					'#22ff22',
+					// using the sqrt makes so if you have for example a ratio of 2
+					// it doesn't show a full blue color but something quite closer to green
+					// issue: https://cdn.ghosty.im/images/rocket-launchpad_Cc7uOtX2hn.png (yes i'm that good ^^)
+					goalsRatio > 1 ? Math.sqrt(goalsRatio) : goalsRatio
+				);
 
 	return (
 		<>
