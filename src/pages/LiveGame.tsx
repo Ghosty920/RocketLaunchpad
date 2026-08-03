@@ -123,15 +123,22 @@ const iconsOrder = [
 	's15rank22', // ssl
 ].map(icon => `ranks/${icon}.png`);
 
-function getHighestRank(stats: any): string {
+/**
+ * @returns [image, full name]
+ */
+function getHighestRank(stats: any): [string, string] {
 	const playlists = stats?.segments?.filter((s: any) => s.type === 'playlist');
-	let highest = 's4-0';
+	let highest: [string, string] = ['s4-0', 'Unranked'];
 	for (const playlist of playlists) {
-		const rankIcon = playlist?.stats?.rating?.metadata?.iconUrl;
+		const metadata = playlist?.stats?.rating?.metadata;
+		if (!metadata) continue;
+		const rankIcon = metadata.iconUrl;
 		if (!rankIcon) continue;
 		const rankImage = getRankImage(rankIcon);
-		if (iconsOrder.indexOf(rankImage) > iconsOrder.indexOf(highest)) {
-			highest = rankImage;
+		const rankName = metadata.tierName;
+		const rankDivision = playlist.stats.division?.metadata?.name;
+		if (iconsOrder.indexOf(rankImage) > iconsOrder.indexOf(highest[0])) {
+			highest = [rankImage, `${rankName ?? ''} ${rankDivision ?? ''}`.trim()];
 		}
 	}
 	return highest;
@@ -223,6 +230,7 @@ function PlayerLine({
 	const [error, setError] = useState<string | null>(null);
 	const [isBot, setIsBot] = useState<boolean>(false);
 
+	const [highestRank, setHighestRank] = useState<[string, string] | null>(null);
 	const [cancelled, setCancelled] = useState(false);
 
 	function fetchStats() {
@@ -252,13 +260,21 @@ function PlayerLine({
 		};
 	}, [player.PrimaryId]);
 
+	useEffect(() => {
+		if (!stats) return;
+		const highest = getHighestRank(stats);
+		setHighestRank(highest);
+	}, [stats]);
+
 	const background = `linear-gradient(180deg, color-mix(in srgb, #${team.ColorPrimary}50 90%, white 10%) 0%, color-mix(in srgb, #${team.ColorPrimary}50 95%, black 5%) 30%)`;
 
 	return (
 		<div className='contents'>
 			<div className='h-12 flex flex-col items-center justify-center' style={{ background }}>
 				{!stats && !error && !isBot && <LoadingSpinner size={12 * 4} />}
-				{stats && <img src={getHighestRank(stats)} className='w-10 h-10 hover:saturate-180' />}
+				{stats && (
+					<img src={highestRank?.[0]} title={highestRank?.[1]} className='w-10 h-10 hover:saturate-180' />
+				)}
 				{error && (
 					<button
 						className='w-10 h-10 bg-[linear-gradient(115deg,#74252c,#e45858,#e98b8b)] hover:bg-[linear-gradient(115deg,#a04b52,#f08989,#f1bbbb)]'
