@@ -44,7 +44,7 @@ pub struct ConfigUpdate {
     pub update_checker: Option<bool>,
 }
 
-pub fn config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+fn config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let base_dir = app
         .path()
         .app_data_dir()
@@ -52,7 +52,7 @@ pub fn config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(base_dir.join("config.json"))
 }
 
-pub fn merge_config(existing: Config, incoming: ConfigUpdate) -> Config {
+fn merge_config(existing: Config, incoming: ConfigUpdate) -> Config {
     Config {
         launch_path: incoming.launch_path.unwrap_or(existing.launch_path),
         launch_args: incoming.launch_args.unwrap_or(existing.launch_args),
@@ -63,7 +63,8 @@ pub fn merge_config(existing: Config, incoming: ConfigUpdate) -> Config {
     }
 }
 
-pub fn get_config(app: &tauri::AppHandle) -> Result<Config, String> {
+#[tauri::command]
+pub fn get_config(app: tauri::AppHandle) -> Result<Config, String> {
     let path = config_path(&app)?;
     if !path.exists() {
         return Ok(Config::default());
@@ -78,18 +79,8 @@ pub fn get_config(app: &tauri::AppHandle) -> Result<Config, String> {
     Ok(config)
 }
 
-/*pub fn save_config(app: &tauri::AppHandle, config: &Config) -> Result<(), String> {
-    let path = config_path(&app)?;
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|err| err.to_string())?;
-    }
-
-    let json = serde_json::to_string_pretty(config).map_err(|err| err.to_string())?;
-    fs::write(&path, json).map_err(|err| err.to_string())?;
-    Ok(())
-}*/
-
-pub fn update_config(app: &tauri::AppHandle, config: ConfigUpdate) -> Result<(), String> {
+#[tauri::command]
+pub fn update_config(app: tauri::AppHandle, config: ConfigUpdate) -> Result<(), String> {
     let path = config_path(&app)?;
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|err| err.to_string())?;

@@ -50,7 +50,7 @@ async fn get_latest_release() -> Result<serde_json::Value, String> {
         .map_err(|e| format!("Failed to parse JSON: {e}"))
 }
 
-pub async fn check_for_update(current_version: String) -> Result<Option<UpdateInfo>, String> {
+async fn check_for_update(current_version: String) -> Result<Option<UpdateInfo>, String> {
     println!("Current version: {current_version}");
 
     let release = get_latest_release().await?;
@@ -104,7 +104,7 @@ pub async fn check_for_update(current_version: String) -> Result<Option<UpdateIn
     }))
 }
 
-pub async fn download_update_and_run(url: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn download_update_and_run(url: &str) -> Result<(), Box<dyn std::error::Error>> {
     let ext = Path::new(url)
         .extension()
         .and_then(|e| e.to_str())
@@ -135,4 +135,19 @@ pub async fn download_update_and_run(url: &str) -> Result<(), Box<dyn std::error
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn check_update(
+    _app: tauri::AppHandle,
+    version: String,
+) -> Result<Option<UpdateInfo>, String> {
+    check_for_update(version).await
+}
+
+#[tauri::command]
+pub async fn install_update(_app: tauri::AppHandle, url: String) -> Result<(), String> {
+    download_update_and_run(&url)
+        .await
+        .map_err(|e| format!("Failed to install update: {e}"))
 }
