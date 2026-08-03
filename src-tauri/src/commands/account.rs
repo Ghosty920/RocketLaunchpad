@@ -193,3 +193,28 @@ pub fn add_account(app: tauri::AppHandle, account: Account) -> Result<(), String
     accounts.push(encrypt_account(&account)?);
     save_accounts(&app, &accounts)
 }
+
+#[tauri::command]
+pub fn reorder_accounts(app: tauri::AppHandle, new_order: Vec<String>) -> Result<(), String> {
+    let accounts = get_raw_accounts(&app)?;
+
+    let mut reordered: Vec<Account> = Vec::with_capacity(accounts.len());
+    for id in &new_order {
+        let account = accounts
+            .iter()
+            .find(|a| &a.account_id == id)
+            .ok_or_else(|| format!("Account {id} not found"))?;
+        reordered.push(account.clone());
+    }
+
+    // in case new_order doesn't have all accs, we just throw an error instead of silently dropping them
+    if reordered.len() != accounts.len() {
+        return Err(format!(
+            "new_order has {} accounts but {} exist",
+            reordered.len(),
+            accounts.len()
+        ));
+    }
+
+    save_accounts(&app, &reordered)
+}

@@ -100,6 +100,8 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 	);
 }
 
+const DRAG_THRESHOLD = 6;
+
 export default function AccountElem({
 	account,
 	onDelete,
@@ -107,6 +109,10 @@ export default function AccountElem({
 	launchingAccount,
 	page,
 	switchPage,
+	isDragging,
+	isDragOver,
+	onDragHandlePointerDown,
+	registerRef,
 }: {
 	account: Account | null;
 	onDelete?: (account: Account) => void | Promise<void>;
@@ -114,6 +120,10 @@ export default function AccountElem({
 	launchingAccount?: Account | null;
 	page?: React.ReactNode;
 	switchPage?: (page: React.ReactNode) => void;
+	isDragging?: boolean;
+	isDragOver?: boolean;
+	onDragHandlePointerDown?: () => void;
+	registerRef?: (node: HTMLDivElement | null) => void;
 }) {
 	if (!account) {
 		return <Loading />;
@@ -126,6 +136,9 @@ export default function AccountElem({
 	const isLaunching = Boolean(launchingAccount?.AccountId);
 	const isLaunchingThis = launchingAccount?.AccountId === account.AccountId;
 
+	const pointerStart = useRef<{ x: number; y: number } | null>(null);
+	const dragTriggered = useRef(false);
+
 	const onDeleteConfirm = async () => {
 		setIsDeleteOpen(false);
 		if (onDelete) {
@@ -136,6 +149,12 @@ export default function AccountElem({
 	const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
 		if (e.button !== 0 && e.button !== 1) return;
 		e.preventDefault();
+
+		if (dragTriggered.current) {
+			dragTriggered.current = false;
+			return;
+		}
+
 		if (isLaunching) return;
 
 		const showStats = e.button === 0 && config.ShowStatsPage;
@@ -150,8 +169,37 @@ export default function AccountElem({
 		}
 	};
 
+	const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+		if (e.button !== 0) return; // uniquement clic gauche pour drag
+		pointerStart.current = { x: e.clientX, y: e.clientY };
+		dragTriggered.current = false;
+
+		const onPointerMove = (moveEvent: PointerEvent) => {
+			if (!pointerStart.current || dragTriggered.current) return;
+			const dx = moveEvent.clientX - pointerStart.current.x;
+			const dy = moveEvent.clientY - pointerStart.current.y;
+			if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+				dragTriggered.current = true;
+				onDragHandlePointerDown?.();
+			}
+		};
+
+		const onPointerUp = () => {
+			pointerStart.current = null;
+			window.removeEventListener('pointermove', onPointerMove);
+			window.removeEventListener('pointerup', onPointerUp);
+		};
+
+		window.addEventListener('pointermove', onPointerMove);
+		window.addEventListener('pointerup', onPointerUp);
+	};
+
 	return (
-		<div className='font-bourgeois text-2xl font-medium w-full px-4 py-3'>
+		<div
+			className={`font-bourgeois text-2xl font-medium w-full px-4 py-3 select-none transition-opacity ${isDragging ? 'opacity-60' : ''} ${isDragOver ? 'outline-2 outline-dashed outline-lime-400/50 rounded-xl' : ''}`}
+			ref={node => registerRef?.(node)}
+			onPointerDown={onPointerDown}
+		>
 			<ContextMenu
 				actions={[
 					<ContextMenuOption

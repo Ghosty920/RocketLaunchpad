@@ -38,6 +38,7 @@ pub fn run() {
             commands::account::remove_account,
             commands::account::get_account,
             commands::account::add_account,
+            commands::account::reorder_accounts,
             commands::login::login_account,
             commands::launcher::launch_game,
             commands::stats::get_stats,

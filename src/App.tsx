@@ -10,6 +10,7 @@ import { X } from 'lucide-react';
 import { ConfigContext, existsGamePath } from './ConfigProvider';
 import { checkForUpdates } from './components/Updater';
 import LiveGame from './pages/LiveGame';
+import AccountsList from './components/AccountList';
 
 function HeaderImage({
 	src,
@@ -101,6 +102,15 @@ export default function App() {
 		}
 	};
 
+	const onReorderAccounts = async (newOrder: string[]) => {
+		setAccounts(prev => {
+			if (!prev) return prev;
+			const newAccounts = newOrder.map(id => prev.find(a => a.AccountId === id)).filter(Boolean) as Account[];
+			return newAccounts;
+		});
+		await invoke('reorder_accounts', { newOrder });
+	};
+
 	const closeLaunchErrorModal = () => {
 		setLaunchError(null);
 		setLaunchingAccount(null);
@@ -164,17 +174,15 @@ export default function App() {
 						<AccountElem account={null} />
 					) : (
 						<>
-							{accounts.map(account => (
-								<AccountElem
-									key={account.AccountId}
-									account={account}
-									onDelete={onDeleteAccount}
-									onLaunch={onLaunchAccount}
-									launchingAccount={launchingAccount}
-									page={shownPage}
-									switchPage={switchPage}
-								/>
-							))}
+							<AccountsList
+								accounts={accounts}
+								onDelete={onDeleteAccount}
+								onLaunch={onLaunchAccount}
+								onReorder={onReorderAccounts}
+								launchingAccount={launchingAccount}
+								page={shownPage}
+								switchPage={switchPage}
+							/>
 							<AddAccount onAdd={onAddAccount} />
 						</>
 					)}
