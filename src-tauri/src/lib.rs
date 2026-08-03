@@ -119,6 +119,7 @@ async fn get_stats(_app: tauri::AppHandle, username: String) -> Result<String, S
         .header("accept-language", "en")
         .header("sec-gpc", "1")
         .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36")
+        .header("trn-api-key", "b6408caa-1660-4922-8f6f-11b54341bb57")
         .send()
         .await
         .map_err(|e| format!("Tracker request failed: {e}"))?;
