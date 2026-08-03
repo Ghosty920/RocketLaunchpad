@@ -1,4 +1,4 @@
-use crate::account::{Account, add_account};
+use crate::commands::account::{Account, add_account};
 use crate::utils::{self, AUTH_CLIENT_ID, AUTH_TOKEN, parse_date};
 use base64::{Engine as _, engine::general_purpose};
 use reqwest::Client;
@@ -7,121 +7,8 @@ use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
-use tauri::WebviewWindowBuilder;
-use tauri::{AppHandle, Manager};
+use tauri::{Manager, WebviewWindowBuilder};
 use tokio::time::{Duration, sleep};
-
-pub async fn login_and_add_account(
-    app: &AppHandle,
-    open_in_window: bool,
-) -> Result<Account, String> {
-    let client = Client::new();
-    let json = start_device_authentication(&client).await?;
-
-    let device_code = json["device_code"]
-        .as_str()
-        .ok_or("No device_code")?
-        .to_string();
-    let verification_url = json["verification_uri_complete"]
-        .as_str()
-        .ok_or("No verification URL")?;
-    let interval = json["interval"].as_u64().unwrap_or(5);
-    let expires_in = json["expires_in"].as_u64().unwrap_or(300);
-
-    let cancelled = Arc::new(AtomicBool::new(false));
-
-    if open_in_window {
-        let win = WebviewWindowBuilder::new(
-            app,
-            "epic-login",
-            tauri::WebviewUrl::External(
-                verification_url
-                    .parse()
-                    .map_err(|e| format!("Invalid URL: {e}"))?,
-            ),
-        )
-        .title("Epic Games Login")
-        .inner_size(500.0, 700.0)
-        .center()
-        .initialization_script(
-            r#"
-            const _close = window.close.bind(window);
-            window.close = () => {
-                if (window.__TAURI_INTERNALS__) {
-                    window.__TAURI_INTERNALS__.invoke('plugin:window|close');
-                } else {
-                _close();
-                }
-            };
-            "#,
-        )
-        .build()
-        .map_err(|e| format!("Failed to open login window: {e}"))?;
-
-        // When the user closes the window, set the cancelled flag
-        let cancelled_clone = cancelled.clone();
-        win.on_window_event(move |event| {
-            if let tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed = event
-            {
-                cancelled_clone.store(true, Ordering::Relaxed);
-            }
-        });
-    } else {
-        open::that(verification_url).map_err(|e| format!("Failed to open browser: {e}"))?;
-    }
-
-    let mut account = Account {
-        username: String::new(),
-        account_id: String::new(),
-        auth_device_id: String::new(),
-        auth_secret: String::new(),
-        access_token: None,
-        access_expires_at: None,
-        refresh_token: None,
-        refresh_expires_at: None,
-    };
-
-    let mut elapsed = 0u64;
-    while elapsed < expires_in {
-        sleep(Duration::from_secs(interval)).await;
-        elapsed += interval;
-
-        // If the window was closed, do one last check before giving up
-        if cancelled.load(Ordering::Relaxed) {
-            if let Ok(access_token) = verify_device_token(&client, &mut account, &device_code).await
-            {
-                get_device_auth(&client, &mut account, &access_token).await?;
-                use_device_auth(&client, &mut account).await?;
-                add_account(app, account.clone())?;
-                return Ok(account);
-            }
-            return Err("Login cancelled by user.".into());
-        }
-
-        let device_token = verify_device_token(&client, &mut account, &device_code).await;
-        let Ok(access_token) = device_token else {
-            continue;
-        };
-
-        get_device_auth(&client, &mut account, &access_token).await?;
-        use_device_auth(&client, &mut account).await?;
-        add_account(app, account.clone())?;
-
-        // Close the login window if it's still open
-        if let Some(win) = app.get_webview_window("epic-login") {
-            let _ = win.close();
-        }
-
-        return Ok(account);
-    }
-
-    // Timed out, close the window if still open
-    if let Some(win) = app.get_webview_window("epic-login") {
-        let _ = win.close();
-    }
-
-    Err("Authentication timed out.".into())
-}
 
 async fn start_device_authentication(client: &Client) -> Result<Value, String> {
     let res = client
@@ -249,4 +136,114 @@ pub async fn use_device_auth(client: &Client, account: &mut Account) -> Result<(
     account.refresh_expires_at = json["refresh_expires_at"].as_str().map(|s| parse_date(s));
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn login_account(app: tauri::AppHandle, open_in_window: bool) -> Result<Account, String> {
+    let client = Client::new();
+    let json = start_device_authentication(&client).await?;
+
+    let device_code = json["device_code"]
+        .as_str()
+        .ok_or("No device_code")?
+        .to_string();
+    let verification_url = json["verification_uri_complete"]
+        .as_str()
+        .ok_or("No verification URL")?;
+    let interval = json["interval"].as_u64().unwrap_or(5);
+    let expires_in = json["expires_in"].as_u64().unwrap_or(300);
+
+    let cancelled = Arc::new(AtomicBool::new(false));
+
+    if open_in_window {
+        let win = WebviewWindowBuilder::new(
+            &app,
+            "epic-login",
+            tauri::WebviewUrl::External(
+                verification_url
+                    .parse()
+                    .map_err(|e| format!("Invalid URL: {e}"))?,
+            ),
+        )
+        .title("Epic Games Login")
+        .inner_size(500.0, 700.0)
+        .center()
+        .initialization_script(
+            r#"
+            const _close = window.close.bind(window);
+            window.close = () => {
+                if (window.__TAURI_INTERNALS__) {
+                    window.__TAURI_INTERNALS__.invoke('plugin:window|close');
+                } else {
+                _close();
+                }
+            };
+            "#,
+        )
+        .build()
+        .map_err(|e| format!("Failed to open login window: {e}"))?;
+
+        // When the user closes the window, set the cancelled flag
+        let cancelled_clone = cancelled.clone();
+        win.on_window_event(move |event| {
+            if let tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed = event
+            {
+                cancelled_clone.store(true, Ordering::Relaxed);
+            }
+        });
+    } else {
+        open::that(verification_url).map_err(|e| format!("Failed to open browser: {e}"))?;
+    }
+
+    let mut account = Account {
+        username: String::new(),
+        account_id: String::new(),
+        auth_device_id: String::new(),
+        auth_secret: String::new(),
+        access_token: None,
+        access_expires_at: None,
+        refresh_token: None,
+        refresh_expires_at: None,
+    };
+
+    let mut elapsed = 0u64;
+    while elapsed < expires_in {
+        sleep(Duration::from_secs(interval)).await;
+        elapsed += interval;
+
+        // If the window was closed, do one last check before giving up
+        if cancelled.load(Ordering::Relaxed) {
+            if let Ok(access_token) = verify_device_token(&client, &mut account, &device_code).await
+            {
+                get_device_auth(&client, &mut account, &access_token).await?;
+                use_device_auth(&client, &mut account).await?;
+                add_account(app.clone(), account.clone())?;
+                return Ok(account);
+            }
+            return Err("Login cancelled by user.".into());
+        }
+
+        let device_token = verify_device_token(&client, &mut account, &device_code).await;
+        let Ok(access_token) = device_token else {
+            continue;
+        };
+
+        get_device_auth(&client, &mut account, &access_token).await?;
+        use_device_auth(&client, &mut account).await?;
+        add_account(app.clone(), account.clone())?;
+
+        // Close the login window if it's still open
+        if let Some(win) = app.get_webview_window("epic-login") {
+            let _ = win.close();
+        }
+
+        return Ok(account);
+    }
+
+    // Timed out, close the window if still open
+    if let Some(win) = app.get_webview_window("epic-login") {
+        let _ = win.close();
+    }
+
+    Err("Authentication timed out.".into())
 }

@@ -35,51 +35,6 @@ pub fn accounts_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(base_dir.join("accounts.json"))
 }
 
-pub fn get_accounts(app: &tauri::AppHandle) -> Result<Vec<AccountInfo>, String> {
-    let path = accounts_path(app)?;
-    if !path.exists() {
-        return Ok(vec![]);
-    }
-
-    let data = std::fs::read_to_string(&path)
-        .map_err(|err| format!("Failed to read accounts file: {err}"))?;
-    let accounts: Vec<Account> = serde_json::from_str(&data)
-        .map_err(|err| format!("Failed to parse accounts file: {err}"))?;
-    migrate_accounts(&path, &accounts)?;
-
-    Ok(accounts
-        .into_iter()
-        .map(|a| AccountInfo {
-            username: a.username,
-            account_id: a.account_id,
-            auth_device_id: a.auth_device_id,
-        })
-        .collect())
-}
-
-pub fn get_account(app: &tauri::AppHandle, account_id: &str) -> Result<Account, String> {
-    let account = get_raw_accounts(app)?
-        .into_iter()
-        .find(|a| a.account_id == account_id)
-        .ok_or_else(|| format!("Account {account_id} not found"))?;
-    decrypt_account(&account)
-}
-
-pub fn add_account(app: &tauri::AppHandle, account: Account) -> Result<(), String> {
-    let mut accounts = get_raw_accounts(app)?;
-    if accounts.iter().any(|a| a.account_id == account.account_id) {
-        return update_account(app, account);
-    }
-    accounts.push(encrypt_account(&account)?);
-    save_accounts(app, &accounts)
-}
-
-pub fn remove_account(app: &tauri::AppHandle, account_id: &str) -> Result<(), String> {
-    let mut accounts = get_raw_accounts(app)?;
-    accounts.retain(|a| a.account_id != account_id);
-    save_accounts(app, &accounts)
-}
-
 pub fn update_account(app: &tauri::AppHandle, account: Account) -> Result<(), String> {
     let mut accounts = get_raw_accounts(app)?;
     let entry = accounts
@@ -184,4 +139,57 @@ fn encrypt_opt(str: &Option<String>) -> Result<Option<String>, String> {
         None => Ok(None),
         Some(v) => encrypt_str(v).map(Some),
     }
+}
+
+/*
+ * Commands:
+ */
+
+#[tauri::command]
+pub fn get_accounts(app: tauri::AppHandle) -> Result<Vec<AccountInfo>, String> {
+    let path = accounts_path(&app)?;
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+
+    let data = std::fs::read_to_string(&path)
+        .map_err(|err| format!("Failed to read accounts file: {err}"))?;
+    let accounts: Vec<Account> = serde_json::from_str(&data)
+        .map_err(|err| format!("Failed to parse accounts file: {err}"))?;
+    migrate_accounts(&path, &accounts)?;
+
+    Ok(accounts
+        .into_iter()
+        .map(|a| AccountInfo {
+            username: a.username,
+            account_id: a.account_id,
+            auth_device_id: a.auth_device_id,
+        })
+        .collect())
+}
+
+#[tauri::command]
+pub fn remove_account(app: tauri::AppHandle, account_id: String) -> Result<(), String> {
+    let mut accounts = get_raw_accounts(&app)?;
+    accounts.retain(|a| a.account_id != account_id);
+    save_accounts(&app, &accounts)
+}
+
+#[tauri::command]
+pub fn get_account(app: tauri::AppHandle, account_id: String) -> Result<Account, String> {
+    let account = get_raw_accounts(&app)?
+        .into_iter()
+        .find(|a| a.account_id == account_id)
+        .ok_or_else(|| format!("Account {account_id} not found"))?;
+    decrypt_account(&account)
+}
+
+#[tauri::command]
+pub fn add_account(app: tauri::AppHandle, account: Account) -> Result<(), String> {
+    let mut accounts = get_raw_accounts(&app)?;
+    if accounts.iter().any(|a| a.account_id == account.account_id) {
+        return update_account(&app, account);
+    }
+    accounts.push(encrypt_account(&account)?);
+    save_accounts(&app, &accounts)
 }

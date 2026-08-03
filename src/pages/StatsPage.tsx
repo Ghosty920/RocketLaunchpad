@@ -1,15 +1,7 @@
 import { Account } from '../types';
 import { useEffect, useState } from 'react';
 import LoadingDots from '../components/LoadingDots';
-import {
-	clearCacheError,
-	getAccountAsPartialPlayer,
-	getCachedErrorMessage,
-	getCachedStats,
-	getRankImage,
-	getStats,
-	playlistIds,
-} from '../lib/accountStats';
+import { getAccountAsPartialPlayer, getRankImage, getStats, playlistIds } from '../lib/accountStats';
 import { PartialPlayer } from './LiveGame';
 
 function PlaylistCard({ data, index }: { data: any; index: number }) {
@@ -118,9 +110,6 @@ export default function StatsPage({ account }: { account: Account | PartialPlaye
 		const requestAccountId = accountId;
 		const requestUsername = account.Name;
 
-		setStats(getCachedStats(accountId));
-		setError(getCachedErrorMessage(accountId));
-
 		getStats(account)
 			.then(data => {
 				if (cancelled) return;
@@ -141,7 +130,6 @@ export default function StatsPage({ account }: { account: Account | PartialPlaye
 	}, [accountId, account.Name, retryTick]);
 
 	const onRetryNow = () => {
-		clearCacheError(accountId);
 		setRetryTick(prev => prev + 1);
 	};
 
