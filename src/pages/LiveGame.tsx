@@ -207,8 +207,12 @@ function PlayerLineStats({
 			</div>
 			{stats ? (
 				<div className='h-full leading-12 text-center flex flex-col justify-center' style={{ background }}>
-					<div className={`${winsColor} text-base font-medium`}>{wins} wins</div>
-					<div className={`text-yellow-500/50 text-sm`}>{mvps} MVPs</div>
+					<div className={`${winsColor} text-base font-medium`}>
+						{wins} win{wins !== 1 ? 's' : ''}
+					</div>
+					<div className={`text-yellow-500/50 text-sm`}>
+						{mvps} MVP{mvps !== 1 ? 's' : ''}
+					</div>
 				</div>
 			) : (
 				<div className='h-full w-full' style={{ background }}></div>
