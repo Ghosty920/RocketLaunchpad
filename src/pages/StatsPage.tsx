@@ -111,6 +111,9 @@ export default function StatsPage({ account }: { account: Account | PartialPlaye
 	const [retryTick, setRetryTick] = useState(0);
 
 	useEffect(() => {
+		setStats(null);
+		setError(null);
+
 		let cancelled = false;
 		const requestAccountId = accountId;
 		const requestUsername = account.Name;
