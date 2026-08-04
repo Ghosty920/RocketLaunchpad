@@ -1,6 +1,6 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
-	"productName": "RocketLaunchpad",
+	"productName": "Rocket Launchpad",
 	"version": "1.0.2",
 	"identifier": "RocketLaunchpad",
 	"build": {
@@ -29,7 +29,17 @@
 	"bundle": {
 		"active": true,
 		"targets": "all",
-		"icon": ["icons/icon.ico"]
+		"icon": ["icons/icon.ico"],
+		"publisher": "Ghosty.im",
+		"windows": {
+			"nsis": {
+				"installMode": "currentUser",
+				"template": "installer/installer.nsi"
+			},
+			"wix": {
+				"template": "installer/main.wxs"
+			}
+		}
 	},
 	"plugins": {
 		"fs": {
