@@ -5,10 +5,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::State;
 
 #[derive(Serialize, Deserialize)]
-struct StatsCacheEntry {
-    expires: u64,
-    success: bool,
-    value: String,
+pub struct StatsCacheEntry {
+    pub expires: u64,
+    pub success: bool,
+    pub is_rate_limited: Option<bool>,
+    pub value: String,
 }
 
 fn now_ms() -> u64 {
@@ -35,7 +36,7 @@ pub async fn get_stats(
     platform: String,
     force: Option<bool>,
     cache: State<'_, Cache>,
-) -> Result<String, String> {
+) -> Result<String, StatsCacheEntry> {
     let key = format!(
         "stats_{}_{}",
         platform.to_lowercase(),
@@ -48,7 +49,7 @@ pub async fn get_stats(
                 return if entry.success {
                     Ok(entry.value)
                 } else {
-                    Err(entry.value)
+                    Err(entry)
                 };
             }
         }
@@ -73,23 +74,55 @@ pub async fn get_stats(
 
     let entry = match response {
         Ok(res) => {
-            if !res.status().is_success() {
-                StatsCacheEntry {
-                    expires: now_ms() + 10_000,
-                    success: false,
-                    value: format!("Tracker HTTP error: {}", res.status()),
+            let status = res.status();
+
+            if !status.is_success() {
+                match status.as_u16() {
+                    429 => {
+                        let retry_after = res
+                            .headers()
+                            .get("retry-after")
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|s| s.parse::<u64>().ok())
+                            .unwrap_or(10);
+                        println!(
+                            "Tracker API rate limit exceeded. Retry after {} seconds.",
+                            retry_after
+                        );
+                        StatsCacheEntry {
+                            expires: now_ms() + retry_after * 1000,
+                            success: false,
+                            is_rate_limited: Some(true),
+                            value: format!(
+                                "Tracker API rate limit exceeded. Retry after {} seconds.",
+                                retry_after
+                            ),
+                        }
+                    }
+                    _ => {
+                        println!("Tracker HTTP error: {}", status);
+
+                        StatsCacheEntry {
+                            expires: now_ms() + 10_000,
+                            success: false,
+                            is_rate_limited: Some(false),
+                            value: format!("Tracker HTTP error: {}", status),
+                        }
+                    }
                 }
             } else {
                 match res.text().await {
                     Ok(text) => StatsCacheEntry {
                         expires: parse_expiry(&text).unwrap_or(now_ms() + 600_000),
                         success: true,
+                        is_rate_limited: None,
                         value: text,
                     },
 
                     Err(e) => StatsCacheEntry {
                         expires: now_ms() + 10_000,
                         success: false,
+                        is_rate_limited: None,
                         value: format!("Failed to read response: {e}"),
                     },
                 }
@@ -99,6 +132,7 @@ pub async fn get_stats(
         Err(e) => StatsCacheEntry {
             expires: now_ms() + 10_000,
             success: false,
+            is_rate_limited: None,
             value: format!("Tracker request failed: {e}"),
         },
     };
@@ -108,6 +142,6 @@ pub async fn get_stats(
     if entry.success {
         Ok(entry.value)
     } else {
-        Err(entry.value)
+        Err(entry)
     }
 }

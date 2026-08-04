@@ -2,6 +2,13 @@ import { invoke } from '@tauri-apps/api/core';
 import { Account } from '../types';
 import { PartialPlayer } from '../pages/LiveGame';
 
+type StatsDataError = {
+	expires: number;
+	success: false;
+	is_rate_limited?: boolean;
+	value: string;
+};
+
 export function getAccountAsPartialPlayer(account: Account): PartialPlayer {
 	return {
 		Name: account.Username,
@@ -20,18 +27,35 @@ export function getPlatformFromPrimaryId(primaryId: string): string {
 	return 'epic'; // simple fallback
 }
 
-export async function getStats(account: Account | PartialPlayer): Promise<any> {
-	if ('Username' in account) return getStats(getAccountAsPartialPlayer(account));
+let rateLimitExpiresAt = 0;
+
+export async function getStats(account: Account | PartialPlayer, force?: boolean): Promise<any> {
+	if ('Username' in account) return getStats(getAccountAsPartialPlayer(account), force);
+
+	if (rateLimitExpiresAt > Date.now()) {
+		const retryAfter = Math.ceil((rateLimitExpiresAt - Date.now()) / 1000);
+		throw new Error(`Tracker API rate limit exceeded. Retry after ${retryAfter} seconds.`);
+	}
+
 	const accountId = account.PrimaryId.split('|')[1];
 
 	const platform = getPlatformFromPrimaryId(account.PrimaryId);
 	const username = platform === 'steam' ? accountId : account.Name;
-	const result = await invoke<any>('get_stats', {
-		username,
-		platform,
-	});
-	const data = JSON.parse(result).data;
-	return data;
+	try {
+		const result = await invoke<string>('get_stats', {
+			username,
+			platform,
+			force,
+		});
+		return JSON.parse(result).data;
+	} catch (err: any) {
+		const error = err as StatsDataError;
+		if (error.is_rate_limited) {
+			rateLimitExpiresAt = error.expires;
+		}
+		// eslint-disable-next-line preserve-caught-error
+		throw new Error(error.value);
+	}
 }
 
 export function getRankImage(url: string): string {
