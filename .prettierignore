@@ -1,2 +1,3 @@
 *.wxs
 pnpm-lock.yaml
+src-tauri/gen/
