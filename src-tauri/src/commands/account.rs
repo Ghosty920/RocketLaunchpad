@@ -1,6 +1,6 @@
 use crate::crypt::{decrypt, encrypt};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 use tauri::Manager;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,16 +50,23 @@ fn get_raw_accounts(app: &tauri::AppHandle) -> Result<Vec<Account>, String> {
     if !path.exists() {
         return Ok(vec![]);
     }
-    let data = std::fs::read_to_string(&path)
-        .map_err(|err| format!("Failed to read accounts file: {err}"))?;
+    let data =
+        fs::read_to_string(&path).map_err(|err| format!("Failed to read accounts file: {err}"))?;
     serde_json::from_str(&data).map_err(|err| format!("Failed to parse accounts file: {err}"))
 }
 
 fn save_accounts(app: &tauri::AppHandle, accounts: &[Account]) -> Result<(), String> {
     let path = accounts_path(app)?;
+
+    // Make the parent folder in case it doesn't exist
+    // A similar fix was added to config.rs, so it shouldn't happen here, but just in case
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|err| err.to_string())?;
+    }
+
     let data = serde_json::to_string_pretty(accounts)
         .map_err(|err| format!("Failed to serialize accounts: {err}"))?;
-    std::fs::write(&path, data).map_err(|err| format!("Failed to write accounts file: {err}"))
+    fs::write(&path, data).map_err(|err| format!("Failed to write accounts file: {err}"))
 }
 
 fn decrypt_account(account: &Account) -> Result<Account, String> {
@@ -107,7 +114,7 @@ fn migrate_accounts(path: &PathBuf, accounts: &[Account]) -> Result<(), String> 
 
     let migrated_data = serde_json::to_string_pretty(&migrated_accounts)
         .map_err(|err| format!("Failed to serialize migrated accounts: {err}"))?;
-    std::fs::write(path, migrated_data)
+    fs::write(path, migrated_data)
         .map_err(|err| format!("Failed to write migrated accounts file: {err}"))?;
     Ok(())
 }
@@ -152,8 +159,8 @@ pub fn get_accounts(app: tauri::AppHandle) -> Result<Vec<AccountInfo>, String> {
         return Ok(vec![]);
     }
 
-    let data = std::fs::read_to_string(&path)
-        .map_err(|err| format!("Failed to read accounts file: {err}"))?;
+    let data =
+        fs::read_to_string(&path).map_err(|err| format!("Failed to read accounts file: {err}"))?;
     let accounts: Vec<Account> = serde_json::from_str(&data)
         .map_err(|err| format!("Failed to parse accounts file: {err}"))?;
     migrate_accounts(&path, &accounts)?;
