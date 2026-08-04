@@ -3394,6 +3394,7 @@ dependencies = [
  "base64 0.23.0",
  "chrono",
  "futures-util",
+ "getrandom 0.4.3",
  "hex",
  "keyring-core",
  "open",
