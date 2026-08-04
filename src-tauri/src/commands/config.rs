@@ -67,6 +67,17 @@ fn merge_config(existing: Config, incoming: ConfigUpdate) -> Config {
 pub fn get_config(app: tauri::AppHandle) -> Result<Config, String> {
     let path = config_path(&app)?;
     if !path.exists() {
+        println!(
+            "Config file does not exist, creating default config at {:?}",
+            path
+        );
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|err| err.to_string())?;
+        }
+        let pretty =
+            serde_json::to_string_pretty(&Config::default()).map_err(|err| err.to_string())?;
+        fs::write(&path, pretty).map_err(|err| err.to_string())?;
+
         return Ok(Config::default());
     }
 
