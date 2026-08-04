@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import LoadingDots from '../components/LoadingDots';
 import { getAccountAsPartialPlayer, getRankImage, getStats, playlistIds } from '../lib/accountStats';
 import { PartialPlayer } from './LiveGame';
+import { RefreshCw } from 'lucide-react';
 
 function PlaylistCard({ data, index }: { data: any; index: number }) {
 	const ranked = data?.attributes?.playlistId !== 0;
@@ -102,27 +103,29 @@ export default function StatsPage({ account }: { account: Account | PartialPlaye
 	const [error, setError] = useState<string | null>(null);
 	const [retryTick, setRetryTick] = useState(0);
 
+	const refreshStats = (cancelled: () => boolean, force: boolean = false) => {
+		const requestAccountId = accountId;
+		getStats(account, force)
+			.then(data => {
+				if (cancelled()) return;
+				if (accountId !== requestAccountId) return;
+				setStats(data);
+				setError(null);
+			})
+			.catch((err: Error) => {
+				if (cancelled()) return;
+				if (accountId !== requestAccountId) return;
+				console.error(err);
+				setError(err.toString());
+			});
+	};
+
 	useEffect(() => {
 		setStats(null);
 		setError(null);
 
 		let cancelled = false;
-		const requestAccountId = accountId;
-		const requestUsername = account.Name;
-
-		getStats(account)
-			.then(data => {
-				if (cancelled) return;
-				if (accountId !== requestAccountId || account.Name !== requestUsername) return;
-				setStats(data);
-				setError(null);
-			})
-			.catch((err: Error) => {
-				if (cancelled) return;
-				if (accountId !== requestAccountId || account.Name !== requestUsername) return;
-				console.error(err);
-				setError(err.toString());
-			});
+		refreshStats(() => cancelled, retryTick > 0);
 
 		return () => {
 			cancelled = true;
@@ -135,7 +138,16 @@ export default function StatsPage({ account }: { account: Account | PartialPlaye
 
 	return (
 		<div>
-			<h1 className='text-4xl font-bold mb-6'>Stats for {account.Name}</h1>
+			<h1 className='text-4xl font-bold mb-6'>
+				Stats for {account.Name}
+				<span className='m-2 p-2' onClick={onRetryNow} title='Refresh stats'>
+					<RefreshCw
+						strokeWidth={2.5}
+						size={26}
+						className='inline-block duration-300 hover:rotate-45 cursor-pointer'
+					/>
+				</span>
+			</h1>
 			{error && (
 				<div className='flex items-center gap-4'>
 					<div className='text-red-300'>Error: {error}</div>

@@ -20,8 +20,8 @@ export function getPlatformFromPrimaryId(primaryId: string): string {
 	return 'epic'; // simple fallback
 }
 
-export async function getStats(account: Account | PartialPlayer): Promise<any> {
-	if ('Username' in account) return getStats(getAccountAsPartialPlayer(account));
+export async function getStats(account: Account | PartialPlayer, force?: boolean): Promise<any> {
+	if ('Username' in account) return getStats(getAccountAsPartialPlayer(account), force);
 	const accountId = account.PrimaryId.split('|')[1];
 
 	const platform = getPlatformFromPrimaryId(account.PrimaryId);
@@ -29,6 +29,7 @@ export async function getStats(account: Account | PartialPlayer): Promise<any> {
 	const result = await invoke<any>('get_stats', {
 		username,
 		platform,
+		force,
 	});
 	const data = JSON.parse(result).data;
 	return data;
