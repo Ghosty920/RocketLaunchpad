@@ -183,18 +183,17 @@ function PlayerLineStats({
 							? 'text-yellow-100'
 							: 'text-white';
 
-	const goalsRatio = player.Shots > 0 ? player.Goals / Math.max(1, player.Shots) : 0;
+	// bonus if 0 shot, to make so 2/1 is the same as 1/0
+	const goalsRatio = player.Shots > 0 ? player.Goals / player.Shots : player.Goals + 1;
+	// using the sqrt makes so if you have for example a ratio of 2
+	// it doesn't show a full blue color but something quite closer to green
+	// issue: https://cdn.ghosty.im/images/rocket-launchpad_Cc7uOtX2hn.png (yes i'm that good ^^)
 	const goalsColor =
 		player.Shots === 0
-			? '#bbbbbb'
-			: lerpHsl(
-					'#ff2222',
-					'#22ff22',
-					// using the sqrt makes so if you have for example a ratio of 2
-					// it doesn't show a full blue color but something quite closer to green
-					// issue: https://cdn.ghosty.im/images/rocket-launchpad_Cc7uOtX2hn.png (yes i'm that good ^^)
-					goalsRatio > 1 ? Math.sqrt(goalsRatio) : goalsRatio
-				);
+			? player.Goals > 0
+				? lerpHsl('#ff2222', '#22ff22', Math.sqrt(goalsRatio))
+				: '#bbbbbb'
+			: lerpHsl('#ff2222', '#22ff22', goalsRatio > 1 ? Math.sqrt(goalsRatio) : goalsRatio);
 
 	return (
 		<>
