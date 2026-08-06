@@ -51,7 +51,7 @@
 		"@types/utf8": "^3.0.3",
 		"@vitejs/plugin-react": "^5.2.0",
 		"eslint": "^10.8.0",
-		"globals": "^17.8.0",
+		"globals": "^17.9.0",
 		"husky": "^9.1.7",
 		"knip": "^6.31.0",
 		"lint-staged": "^17.3.0",
