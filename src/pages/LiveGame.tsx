@@ -138,7 +138,9 @@ function getHighestRank(stats: any): [string, string] {
 		const rankName = metadata.tierName;
 		const rankDivision = playlist.stats.division?.metadata?.name;
 		if (iconsOrder.indexOf(rankImage) > iconsOrder.indexOf(highest[0])) {
-			highest = [rankImage, `${rankName ?? ''} ${rankDivision ?? ''}`.trim()];
+			// do not add a Division X if the rank is Unranked
+			const divisionText = !rankImage.includes('s4-0') ? (rankDivision ?? '') : '';
+			highest = [rankImage, `${rankName ?? ''} ${divisionText}`.trim()];
 		}
 	}
 	return highest;
