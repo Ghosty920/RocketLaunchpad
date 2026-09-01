@@ -1,6 +1,6 @@
 [package]
 name = "rocket-launchpad"
-version = "1.1.0"
+version = "1.1.1"
 description = "A Rocket League launcher powered by Tauri"
 authors = ["Ghosty"]
 edition = "2024"
