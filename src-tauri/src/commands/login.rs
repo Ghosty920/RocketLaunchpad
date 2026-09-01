@@ -1,4 +1,5 @@
 use crate::commands::account::{Account, add_account};
+use crate::tools::webview::build_window;
 use crate::utils::{self, AUTH_CLIENT_ID, AUTH_TOKEN, parse_date};
 use base64::{Engine as _, engine::general_purpose};
 use reqwest::Client;
@@ -156,31 +157,19 @@ pub async fn login_account(app: tauri::AppHandle, open_in_window: bool) -> Resul
     let cancelled = Arc::new(AtomicBool::new(false));
 
     if open_in_window {
-        let win = WebviewWindowBuilder::new(
-            &app,
-            "epic-login",
-            tauri::WebviewUrl::External(
-                verification_url
-                    .parse()
-                    .map_err(|e| format!("Invalid URL: {e}"))?,
-            ),
+        let win = build_window(
+            WebviewWindowBuilder::new(
+                &app,
+                "epic-login",
+                tauri::WebviewUrl::External(
+                    verification_url
+                        .parse()
+                        .map_err(|e| format!("Invalid URL: {e}"))?,
+                ),
+            )
+            .title("Epic Games Login")
+            .inner_size(500.0, 700.0),
         )
-        .title("Epic Games Login")
-        .inner_size(500.0, 700.0)
-        .center()
-        .initialization_script(
-            r#"
-            const _close = window.close.bind(window);
-            window.close = () => {
-                if (window.__TAURI_INTERNALS__) {
-                    window.__TAURI_INTERNALS__.invoke('plugin:window|close');
-                } else {
-                _close();
-                }
-            };
-            "#,
-        )
-        .build()
         .map_err(|e| format!("Failed to open login window: {e}"))?;
 
         // When the user closes the window, set the cancelled flag

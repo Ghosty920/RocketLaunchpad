@@ -37,7 +37,7 @@ chrono = "0.4"
 anyhow = "1"
 tokio = { version = "1", features = ["full"] }
 zstd = "0.13"
-reqwest = { version = "0.13", features = ["json", "blocking", "stream", "rustls", "gzip", "brotli", "deflate", "zstd"] }
+reqwest = { version = "0.13", features = ["json", "blocking", "stream", "rustls", "native-tls", "gzip", "brotli", "deflate", "zstd"] }
 futures-util = "0.3"
 urlencoding = "2"
 uuid = { version = "1", features = ["v4"] }

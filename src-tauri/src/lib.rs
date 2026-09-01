@@ -6,6 +6,7 @@ mod commands;
 mod crypt;
 mod keychain;
 mod stats_api;
+mod tools;
 mod utils;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

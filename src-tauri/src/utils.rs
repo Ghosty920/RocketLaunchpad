@@ -41,8 +41,16 @@ pub fn fix_base64(str: &str) -> String {
 }
 
 pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
-    Client::builder()
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36")
-        .build()
-        .unwrap()
+    let mut builder = Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36");
+
+    let use_proxy = cfg!(debug_assertions) || std::env::var("APP_DEBUG_PROXY").is_ok();
+    if use_proxy {
+        println!("Using proxy for requests");
+        builder = builder
+            .proxy(reqwest::Proxy::all("http://127.0.0.1:8888").unwrap())
+            .danger_accept_invalid_certs(true);
+    }
+
+    builder.build().unwrap()
 });
