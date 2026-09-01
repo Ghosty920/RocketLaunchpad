@@ -106,8 +106,11 @@ async fn handle_message(shared: &Arc<SharedState>, outer: Value) {
     }
 }
 
-async fn connect_and_stream(shared: &Arc<SharedState>) -> anyhow::Result<()> {
-    println!("stats_api: Attempting to connect to the Stats API...");
+async fn connect_and_stream(
+    shared: &Arc<SharedState>,
+    connecting: &mut bool,
+) -> anyhow::Result<()> {
+    *connecting = true;
     let stats_api_port = get_stats_api_port().expect("stats_api: Failed to get stats API port");
     let stats_api_addr = format!("127.0.0.1:{}", stats_api_port);
     let mut stream = TcpStream::connect(&stats_api_addr).await?;
@@ -118,10 +121,10 @@ async fn connect_and_stream(shared: &Arc<SharedState>) -> anyhow::Result<()> {
     // it just needs something that looks like it to start sending data
     let request = format!(
         "GET / HTTP/1.1\r\n\
-         Host: localhost:{stats_api_port}\r\n\
-         Connection: Upgrade\r\n\
-         Upgrade: websocket\r\n\
-         Sec-WebSocket-Version: 13\r\n\
+        Host: localhost:{stats_api_port}\r\n\
+        Connection: Upgrade\r\n\
+        Upgrade: websocket\r\n\
+        Sec-WebSocket-Version: 13\r\n\
          Sec-WebSocket-Key: dGF1cmktc3RhdHMtbGlzdGVuZXI=\r\n\
          \r\n"
     );
@@ -177,9 +180,14 @@ pub fn start_stats_listener(app: AppHandle) {
     {
         let shared = shared.clone();
         tauri::async_runtime::spawn(async move {
+            let mut connecting = false;
             loop {
-                match connect_and_stream(&shared).await {
+                if !connecting {
+                    println!("stats_api: Attempting to connect to the Stats API...");
+                }
+                match connect_and_stream(&shared, &mut connecting).await {
                     Ok(()) => {
+                        connecting = false;
                         eprintln!("stats_api: connexion stopped properly, reconnecting...");
                     }
                     Err(e) => {
@@ -191,6 +199,7 @@ pub fn start_stats_listener(app: AppHandle) {
 
                         if !is_connection_refused {
                             eprintln!("stats_api: Error: {e}, retrying in 3s");
+                            connecting = false;
                         }
                     }
                 }
