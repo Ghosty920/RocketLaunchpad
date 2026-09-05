@@ -44,7 +44,7 @@ pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
     let mut builder = Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36");
 
-    let use_proxy = cfg!(debug_assertions) || std::env::var("APP_DEBUG_PROXY").is_ok();
+    let use_proxy = std::env::var("APP_DEBUG_PROXY").is_ok();
     if use_proxy {
         println!("Using proxy for requests");
         builder = builder
