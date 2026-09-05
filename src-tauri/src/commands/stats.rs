@@ -63,12 +63,19 @@ pub async fn get_stats(
 
     let response = CLIENT
         .get(&url)
-        .header("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
-        .header("accept-encoding", "gzip, deflate, br, zstd")
-        .header("accept-language", "en")
-        .header("sec-gpc", "1")
-        .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36")
-        .header("trn-api-key", "b6408caa-1660-4922-8f6f-11b54341bb57")
+        .header("Accept", "*/*")
+        .header("Content-Type", "application/json")
+        .header("Origin", "https://www.overwolf.com/nonfnefnlcikmjkkdclbhpojenalpkcoipjjognm")
+        .header("TRN-API-Key", "b6408caa-1660-4922-8f6f-11b54341bb57")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OverwolfClient/0.309.0.14")
+        .header("sec-ch-ua", "\"Not_A Brand\";v=\"99\", \"Chromium\";v=\"142\"")
+        .header("sec-ch-ua-mobile", "?0")
+        .header("sec-ch-ua-platform", "\"Windows\"")
+        .header("Sec-Fetch-Site", "none")
+        .header("Sec-Fetch-Mode", "cors")
+        .header("Sec-Fetch-Dest", "empty")
+        .header("Accept-Encoding", "gzip, deflate, br, zstd")
+        .header("Accept-Language", "en-US,en;q=0.9")
         .send()
         .await;
 
