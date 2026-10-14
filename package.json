@@ -43,7 +43,7 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@tauri-apps/cli": "^2.11.4",
+		"@tauri-apps/cli": "^2.12.2",
 		"@types/base-64": "^1.0.2",
 		"@types/node": "^24.13.3",
 		"@types/react": "^19.2.18",
