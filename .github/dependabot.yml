@@ -3,17 +3,34 @@ updates:
   - package-ecosystem: 'npm'
     directory: '/'
     schedule:
-      interval: 'daily'
+      interval: 'weekly'
     open-pull-requests-limit: 20
     labels:
       - dependencies
       - javascript
+    groups:
+      actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: 'cargo'
     directory: '/src-tauri'
     schedule:
-      interval: 'daily'
+      interval: 'weekly'
     open-pull-requests-limit: 20
     labels:
       - dependencies
       - rust
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - "*"
