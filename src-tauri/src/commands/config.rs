@@ -1,3 +1,4 @@
+use crate::tools::parse::parse_url;
 use crate::utils::clean_launch_path;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
@@ -57,16 +58,13 @@ fn config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 }
 
 fn merge_config(existing: Config, incoming: ConfigUpdate) -> Config {
-    let proxy_url = incoming
+    let mut proxy_url = incoming
         .proxy_url
         .unwrap_or(existing.proxy_url)
         .trim()
         .to_string();
-    let proxy_url = if let Some(rest) = proxy_url.strip_prefix("socks5://") {
-        format!("socks5h://{rest}")
-    } else {
-        proxy_url
-    };
+    proxy_url = parse_url(&proxy_url).unwrap_or(proxy_url);
+
     Config {
         launch_path: incoming.launch_path.unwrap_or(existing.launch_path),
         launch_args: incoming.launch_args.unwrap_or(existing.launch_args),

@@ -1,4 +1,5 @@
 use crate::commands::config::get_config;
+use crate::tools::parse::parse_url;
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 use std::path::PathBuf;
@@ -46,11 +47,7 @@ pub fn http_client(app: &AppHandle) -> Result<Client, String> {
     let mut builder = Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36");
 
-    let proxy_url = if let Some(rest) = config.proxy_url.strip_prefix("socks5://") {
-        format!("socks5h://{rest}")
-    } else {
-        config.proxy_url
-    };
+    let proxy_url = parse_url(&config.proxy_url).unwrap_or(config.proxy_url);
 
     if !proxy_url.is_empty() {
         builder = builder.proxy(
