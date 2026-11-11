@@ -1,15 +1,18 @@
 use crate::commands::account::{get_account, update_account};
 use crate::commands::config::get_config;
 use crate::tools::webview::build_window;
-use crate::utils::{AUTH_EGL_TOKEN, CLIENT, expired};
+use crate::utils::{AUTH_EGL_TOKEN, expired, http_client};
 use serde_json::Value;
 use std::process::Command;
 use std::sync::Mutex;
 use tauri::WebviewWindowBuilder;
 use tokio::sync::oneshot;
 
-async fn get_oauth_exchange(access_token: &str) -> Result<String, String> {
-    let res = CLIENT
+async fn get_oauth_exchange(
+    client: &reqwest::Client,
+    access_token: &str,
+) -> Result<String, String> {
+    let res = client
         .get("https://account-public-service-prod.ol.epicgames.com/account/api/oauth/exchange")
         .header("Authorization", format!("Bearer {access_token}"))
         .send()
@@ -32,16 +35,17 @@ async fn get_oauth_exchange(access_token: &str) -> Result<String, String> {
 
 async fn get_oauth_token(
     app: &tauri::AppHandle,
+    client: &reqwest::Client,
     auth_token: &str,
     body: &str,
 ) -> Result<Value, String> {
-    match try_get_token(auth_token, body).await? {
+    match try_get_token(client, auth_token, body).await? {
         TokenAttempt::Success(token) => Ok(token),
         TokenAttempt::Pending(continuation_url) => {
             open_and_wait_for_close(app, &continuation_url).await?;
 
             // Une seule relance après fermeture de la fenêtre
-            match try_get_token(auth_token, body).await? {
+            match try_get_token(client, auth_token, body).await? {
                 TokenAttempt::Success(token) => Ok(token),
                 TokenAttempt::Pending(_) => Err("Login/continuation not completed.".to_string()),
             }
@@ -89,8 +93,12 @@ enum TokenAttempt {
     Pending(String),
 }
 
-async fn try_get_token(auth_token: &str, body: &str) -> Result<TokenAttempt, String> {
-    let res = CLIENT
+async fn try_get_token(
+    client: &reqwest::Client,
+    auth_token: &str,
+    body: &str,
+) -> Result<TokenAttempt, String> {
+    let res = client
         .post("https://account-public-service-prod.ol.epicgames.com/account/api/oauth/token")
         .header("Authorization", format!("Basic {auth_token}"))
         .header("Content-Type", "application/x-www-form-urlencoded")
@@ -140,28 +148,29 @@ pub async fn launch_game(
     account_id: String,
     use_eac: bool,
 ) -> Result<String, String> {
+    let client = http_client(&app)?;
     let mut account = get_account(app.clone(), account_id)?;
 
     // Refresh if the access token is expired
     if expired(account.access_expires_at.unwrap_or(0)) {
-        crate::commands::login::use_device_auth(&CLIENT, &mut account).await?;
+        crate::commands::login::use_device_auth(&client, &mut account).await?;
         update_account(&app, account.clone())?;
     }
 
     let access_token = account.access_token.as_deref().ok_or("No access token")?;
 
     // Step 1 : exchange code from the access token
-    let exchange_code = get_oauth_exchange(access_token).await?;
+    let exchange_code = get_oauth_exchange(&client, access_token).await?;
 
     // Step 2 : token EGL from the exchange code
     let token_content = format!("grant_type=exchange_code&exchange_code={exchange_code}");
-    let egl_token = get_oauth_token(&app, AUTH_EGL_TOKEN, &token_content).await?;
+    let egl_token = get_oauth_token(&app, &client, AUTH_EGL_TOKEN, &token_content).await?;
     let egl_access = egl_token["access_token"]
         .as_str()
         .ok_or("No EGL access token")?;
 
     // Step 3 : final exchange code (auth password)
-    let auth_password = get_oauth_exchange(egl_access).await?;
+    let auth_password = get_oauth_exchange(&client, egl_access).await?;
 
     let config = get_config(app.clone()).expect("Config couldn't be loaded");
     let mut args = vec![

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::utils::CLIENT;
+use crate::utils::http_client;
 use futures_util::StreamExt;
 use std::{
     env,
@@ -27,8 +27,8 @@ fn is_installed_with_nsis() -> Result<bool, std::io::Error> {
     Ok(uninstall.exists())
 }
 
-async fn get_latest_release() -> Result<serde_json::Value, String> {
-    let response = CLIENT
+async fn get_latest_release(client: &reqwest::Client) -> Result<serde_json::Value, String> {
+    let response = client
         .get("https://api.github.com/repos/Ghosty920/RocketLaunchpad/releases/latest")
         .header("User-Agent", "RocketLaunchpad")
         .header("Accept", "application/vnd.github+json")
@@ -50,10 +50,13 @@ async fn get_latest_release() -> Result<serde_json::Value, String> {
         .map_err(|e| format!("Failed to parse JSON: {e}"))
 }
 
-async fn check_for_update(current_version: String) -> Result<Option<UpdateInfo>, String> {
+async fn check_for_update(
+    client: &reqwest::Client,
+    current_version: String,
+) -> Result<Option<UpdateInfo>, String> {
     println!("Current version: {current_version}");
 
-    let release = get_latest_release().await?;
+    let release = get_latest_release(client).await?;
 
     let latest_version = release["tag_name"]
         .as_str()
@@ -104,7 +107,10 @@ async fn check_for_update(current_version: String) -> Result<Option<UpdateInfo>,
     }))
 }
 
-async fn download_update_and_run(url: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn download_update_and_run(
+    client: &reqwest::Client,
+    url: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let ext = Path::new(url)
         .extension()
         .and_then(|e| e.to_str())
@@ -114,7 +120,7 @@ async fn download_update_and_run(url: &str) -> Result<(), Box<dyn std::error::Er
     let path: PathBuf = env::temp_dir().join(&file_name);
     println!("Downloading update to: {:?}", path);
 
-    let response = reqwest::get(url).await?;
+    let response = client.get(url).send().await?;
     let mut stream = response.bytes_stream();
 
     let mut file = File::create(&path).await?;
@@ -139,15 +145,17 @@ async fn download_update_and_run(url: &str) -> Result<(), Box<dyn std::error::Er
 
 #[tauri::command]
 pub async fn check_update(
-    _app: tauri::AppHandle,
+    app: tauri::AppHandle,
     version: String,
 ) -> Result<Option<UpdateInfo>, String> {
-    check_for_update(version).await
+    let client = http_client(&app)?;
+    check_for_update(&client, version).await
 }
 
 #[tauri::command]
-pub async fn install_update(_app: tauri::AppHandle, url: String) -> Result<(), String> {
-    download_update_and_run(&url)
+pub async fn install_update(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    let client = http_client(&app)?;
+    download_update_and_run(&client, &url)
         .await
         .map_err(|e| format!("Failed to install update: {e}"))
 }

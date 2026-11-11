@@ -141,7 +141,7 @@ pub async fn use_device_auth(client: &Client, account: &mut Account) -> Result<(
 
 #[tauri::command]
 pub async fn login_account(app: tauri::AppHandle, open_in_window: bool) -> Result<Account, String> {
-    let client = Client::new();
+    let client = utils::http_client(&app)?;
     let json = start_device_authentication(&client).await?;
 
     let device_code = json["device_code"]

@@ -1,4 +1,4 @@
-use crate::{cache::Cache, utils::CLIENT};
+use crate::{cache::Cache, utils::http_client};
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -31,7 +31,7 @@ fn parse_expiry(text: &str) -> Option<u64> {
 
 #[tauri::command]
 pub async fn get_stats(
-    _app: tauri::AppHandle,
+    app: tauri::AppHandle,
     username: String,
     platform: String,
     force: Option<bool>,
@@ -42,6 +42,17 @@ pub async fn get_stats(
         platform.to_lowercase(),
         username.to_lowercase()
     );
+    let client = match http_client(&app) {
+        Ok(client) => client,
+        Err(error) => {
+            return Err(StatsCacheEntry {
+                expires: now_ms() + 10_000,
+                success: false,
+                is_rate_limited: None,
+                value: error,
+            });
+        }
+    };
 
     if !force.unwrap_or(false) {
         if let Some(entry) = cache.get::<StatsCacheEntry>(&key) {
@@ -61,7 +72,7 @@ pub async fn get_stats(
         urlencoding::encode(&username)
     );
 
-    let response = CLIENT
+    let response = client
         .get(&url)
         .header("Accept", "*/*")
         .header("Content-Type", "application/json")
