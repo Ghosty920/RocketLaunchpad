@@ -1,30 +1,28 @@
 version: 2
 updates:
-  - package-ecosystem: 'npm'
-    directory: '/'
+  - package-ecosystem: npm
+    directory: /
     schedule:
-      interval: 'weekly'
-    open-pull-requests-limit: 20
+      interval: weekly
     labels:
       - dependencies
       - javascript
     groups:
-      actions:
+      node:
         patterns:
-          - "*"
+          - '*'
 
-  - package-ecosystem: 'cargo'
-    directory: '/src-tauri'
+  - package-ecosystem: cargo
+    directory: /src-tauri
     schedule:
-      interval: 'weekly'
-    open-pull-requests-limit: 20
+      interval: weekly
     labels:
       - dependencies
       - rust
     groups:
-      actions:
+      rust:
         patterns:
-          - "*"
+          - '*'
 
   - package-ecosystem: github-actions
     directory: /
@@ -33,4 +31,4 @@ updates:
     groups:
       actions:
         patterns:
-          - "*"
+          - '*'
