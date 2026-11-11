@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import { ConfigContext, existsGamePath } from '../ConfigProvider';
+import { ConfigContext, existsGamePath, redactProxyUrl } from '../ConfigProvider';
 import { invoke } from '@tauri-apps/api/core';
 import YesNoSwitch from '../components/YesNoSwitch';
 import { toast } from 'react-toastify';
@@ -136,6 +136,13 @@ function AppOptions() {
 	const { config, updateConfig } = useContext(ConfigContext)!;
 	const [showStatsError, setShowStatsError] = useState<string | null>(null);
 	const [closeOnLaunchError, setCloseOnLaunchError] = useState<string | null>(null);
+	const [isProxyValid, setIsProxyValid] = useState<boolean>(false);
+	const [proxyError, setProxyError] = useState<string | null>(null);
+	const [proxyUrlValue, setProxyUrlValue] = useState('');
+	const [isProxyUrlActive, setIsProxyUrlActive] = useState(false);
+	const proxyUrlRef = useRef<HTMLInputElement>(null);
+	const proxyUrlBtnRef = useRef<HTMLButtonElement>(null);
+	const [proxyUrlColorTimeout, setProxyUrlColorTimeout] = useState<NodeJS.Timeout>();
 
 	const saveShowStats = (value: boolean) => {
 		setShowStatsError(null);
@@ -153,6 +160,55 @@ function AppOptions() {
 		});
 	};
 
+	const saveProxyUrl = () => {
+		const timeout = () => {
+			clearTimeout(proxyUrlColorTimeout);
+			setProxyUrlColorTimeout(
+				setTimeout(() => {
+					proxyUrlBtnRef.current?.classList.remove(...colorsSuccess, ...colorsError);
+				}, 1000)
+			);
+		};
+
+		setProxyError(null);
+		const colorsSuccess = ['border-green-400!', 'hover:border-green-600!'];
+		const colorsError = ['border-red-400!', 'hover:border-red-600!'];
+		updateConfig({ ProxyUrl: proxyUrlValue.trim() })
+			.then(() => {
+				setProxyUrlValue(proxyUrlValue.trim());
+				proxyUrlBtnRef.current?.classList.add(...colorsSuccess);
+				proxyUrlBtnRef.current?.classList.remove(...colorsError);
+				timeout();
+			})
+			.catch(err => {
+				console.error('Error saving proxy URL:', err);
+				setProxyError(err ? String(err) : 'An unknown error occurred while saving the proxy URL.');
+				proxyUrlBtnRef.current?.classList.add(...colorsError);
+				proxyUrlBtnRef.current?.classList.remove(...colorsSuccess);
+				timeout();
+			});
+	};
+
+	const checkUrl = (str: string): boolean => {
+		if (str.trim() === '') return true;
+		try {
+			const url = new URL(str);
+			return (
+				['http:', 'https:', 'socks4:', 'socks5:', 'socks5h:'].includes(url.protocol) && url.hostname.length > 0
+			);
+		} catch (error) {
+			return false;
+		}
+	};
+
+	useEffect(() => {
+		const configuredProxyUrl = config.ProxyUrl;
+		if (!isProxyUrlActive) {
+			setProxyUrlValue(configuredProxyUrl);
+			setIsProxyValid(checkUrl(configuredProxyUrl));
+		}
+	}, [config.ProxyUrl]);
+
 	return (
 		<ConfigBox>
 			<div className='mt-2 flex items-center gap-3'>
@@ -164,7 +220,34 @@ function AppOptions() {
 				<label className='text-2xl text-white'>Close on Launch:</label>
 				<YesNoSwitch state={config.CloseOnLaunch} setState={saveCloseOnLaunch} size={9} />
 			</div>
-			<p className='text-red-300'>{closeOnLaunchError}</p>
+			<p className='text-red-300 mb-6'>{closeOnLaunchError}</p>
+			<label className='text-2xl text-white'>Proxy URL:</label>
+			<div className='mt-3 flex gap-3'>
+				<input
+					value={isProxyUrlActive ? proxyUrlValue : redactProxyUrl(proxyUrlValue)}
+					ref={proxyUrlRef}
+					onFocus={() => setIsProxyUrlActive(true)}
+					onBlur={() => setIsProxyUrlActive(false)}
+					onChange={ev => {
+						setProxyUrlValue(ev.target.value);
+						setIsProxyValid(checkUrl(ev.target.value));
+					}}
+					className='flex-1 bg-[#0b0b0b] border border-white/10 text-base px-3 py-2 rounded-md text-white/80'
+					placeholder='None set'
+					spellCheck={false}
+				/>
+				<button
+					onClick={saveProxyUrl}
+					ref={proxyUrlBtnRef}
+					disabled={!isProxyValid}
+					className={
+						'px-4 py-2 rounded-md text-base font-medium transition-all duration-400 border-2 border-blue-400/0 hover:border-blue-600/70 bg-white/10 hover:bg-white/30 disabled:bg-gray-500/40 disabled:hover:bg-gray-500/40 disabled:hover:border-red-400/50 disabled:cursor-not-allowed'
+					}
+				>
+					Save
+				</button>
+			</div>
+			<p className='text-red-300'>{proxyError}</p>
 		</ConfigBox>
 	);
 }

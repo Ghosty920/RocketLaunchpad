@@ -4,7 +4,7 @@ import { useContext, useEffect, useRef } from 'react';
 import { ConfigContext } from '../ConfigProvider';
 import { Config } from '../types';
 
-type ConfigNoPath = Omit<Config, 'LaunchPath'>;
+type ConfigNoPath = Omit<Config, 'LaunchPath' | 'ProxyUrl'>;
 
 export default function Stats() {
 	const statsWebsiteId = import.meta.env.VITE_STATS_WEBSITE_ID as string | undefined;
@@ -42,7 +42,7 @@ export default function Stats() {
 
 			const refresh = () => {
 				if (window.umami) {
-					const { LaunchPath, ...settings } = configRef.current;
+					const { LaunchPath, ProxyUrl, ...settings } = configRef.current;
 					const changed = (Object.keys(settings) as (keyof ConfigNoPath)[]).some(
 						key => settings[key] !== lastSettings?.[key]
 					);

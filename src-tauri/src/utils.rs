@@ -1,7 +1,9 @@
+use crate::commands::config::get_config;
+use crate::tools::parse::parse_url;
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 use std::path::PathBuf;
-use std::sync::LazyLock;
+use tauri::AppHandle;
 
 pub fn clean_launch_path(path: &str) -> String {
     let p = PathBuf::from(path);
@@ -40,17 +42,20 @@ pub fn fix_base64(str: &str) -> String {
     fixed
 }
 
-pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
+pub fn http_client(app: &AppHandle) -> Result<Client, String> {
+    let config = get_config(app.clone())?;
     let mut builder = Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36");
 
-    let use_proxy = std::env::var("APP_DEBUG_PROXY").is_ok();
-    if use_proxy {
-        println!("Using proxy for requests");
-        builder = builder
-            .proxy(reqwest::Proxy::all("http://127.0.0.1:8888").unwrap())
-            .danger_accept_invalid_certs(true);
+    let proxy_url = parse_url(&config.proxy_url).unwrap_or(config.proxy_url);
+
+    if !proxy_url.is_empty() {
+        builder = builder.proxy(
+            reqwest::Proxy::all(&proxy_url).map_err(|err| format!("Invalid proxy URL: {err}"))?,
+        );
     }
 
-    builder.build().unwrap()
-});
+    builder
+        .build()
+        .map_err(|err| format!("Failed to build HTTP client: {err}"))
+}
