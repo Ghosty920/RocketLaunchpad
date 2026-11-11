@@ -42,14 +42,14 @@ jobs:
           VITE_GIT_SHA: ${{ env.GIT_SHA_SHORT }}
           VITE_BUILD_MODE: ${{ env.BUILD_MODE }}
         with:
-          includeDebug: true
+          args: --debug
           tauriScript: pnpm tauri
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
         with:
           name: RocketLaunchpad-windows
           path: |
-            src-tauri/target/release/*.exe
-            src-tauri/target/release/*.dll
-            src-tauri/target/release/*.pdb
+            src-tauri/target/debug/*.exe
+            src-tauri/target/debug/*.dll
+            src-tauri/target/debug/*.pdb
           retention-days: 90
