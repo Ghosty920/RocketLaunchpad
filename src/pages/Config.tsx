@@ -203,8 +203,10 @@ function AppOptions() {
 
 	useEffect(() => {
 		const configuredProxyUrl = config.ProxyUrl;
-		if (!isProxyUrlActive) setProxyUrlValue(configuredProxyUrl);
-		setIsProxyValid(checkUrl(configuredProxyUrl));
+		if (!isProxyUrlActive) {
+			setProxyUrlValue(configuredProxyUrl);
+			setIsProxyValid(checkUrl(configuredProxyUrl));
+		}
 	}, [config.ProxyUrl]);
 
 	return (
