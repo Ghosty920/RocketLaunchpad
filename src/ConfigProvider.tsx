@@ -13,6 +13,19 @@ export function existsGamePath(path: string): Promise<boolean> {
 	return exists(path + '\\RocketLeague.exe');
 }
 
+export function redactProxyUrl(proxyUrl: string): string {
+	if (!proxyUrl) return proxyUrl;
+
+	try {
+		const url = new URL(proxyUrl);
+		if (url.username) url.username = '****';
+		if (url.password) url.password = '****';
+		return url.toString();
+	} catch {
+		return proxyUrl;
+	}
+}
+
 export const ConfigContext = createContext<ConfigContextType | null>(null);
 
 export default function ConfigProvider({ children }: { children: React.ReactNode }) {
@@ -44,7 +57,8 @@ export default function ConfigProvider({ children }: { children: React.ReactNode
 	useEffect(() => {
 		invoke<Config>('get_config')
 			.then(cfg => {
-				console.log('Loaded config:', cfg);
+				const { ProxyUrl, ...safeConfig } = cfg;
+				console.log('Loaded config:', { ...safeConfig, ProxyUrl: redactProxyUrl(ProxyUrl) });
 				setConfig(cfg);
 				setFirstLoaded(true);
 				if (cfg.LaunchPath.length <= 1) checkForGamePath();
