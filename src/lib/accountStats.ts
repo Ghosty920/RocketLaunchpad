@@ -16,7 +16,7 @@ export function getAccountAsPartialPlayer(account: Account): PartialPlayer {
 	};
 }
 
-export function getPlatformFromPrimaryId(primaryId: string): string {
+function getPlatformFromPrimaryId(primaryId: string): string {
 	const raw = primaryId.split('|')[0].toLowerCase();
 	if (raw === 'epic') return 'epic';
 	if (raw === 'steam') return 'steam';

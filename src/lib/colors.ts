@@ -21,6 +21,7 @@ function clamp(v: number, min: number, max: number): number {
 
 /**
  * Accepted formats: (#)RGB, (#)RRGGBB
+ * @public
  */
 export function parseColor(color: string): RGB {
 	const c = color.trim().toLowerCase();
@@ -50,6 +51,7 @@ export function parseColor(color: string): RGB {
 
 /**
  * RGB -> #RRGGBB
+ * @public
  */
 export function rgbToHex({ r, g, b }: RGB): HexColor {
 	const hex = (n: number) =>
@@ -59,6 +61,9 @@ export function rgbToHex({ r, g, b }: RGB): HexColor {
 	return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
+/**
+ * @public
+ */
 export function rgbToHsl({ r, g, b }: RGB): HSL {
 	const rn = r / 255,
 		gn = g / 255,
@@ -79,6 +84,9 @@ export function rgbToHsl({ r, g, b }: RGB): HSL {
 	return { h: h * 60, s: s * 100, l: l * 100 };
 }
 
+/**
+ * @public
+ */
 export function hslToRgb({ h, s, l }: HSL): RGB {
 	const sn = s / 100,
 		ln = l / 100;
@@ -122,6 +130,7 @@ export function hslToRgb({ h, s, l }: HSL): RGB {
 
 /**
  * Interpolate between two colors in HSL space, returning a hex string
+ * @public
  */
 export function lerpHsl(from: string, to: string, t: number): HexColor {
 	const a = rgbToHsl(parseColor(from));

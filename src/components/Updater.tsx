@@ -82,7 +82,7 @@ export async function checkForUpdates(): Promise<UpdateInfo | null> {
 	return info;
 }
 
-export function UpdateToast({ info, id }: { info: UpdateInfo; id: () => string | number }) {
+function UpdateToast({ info, id }: { info: UpdateInfo; id: () => string | number }) {
 	const installButtonRef = useRef<HTMLButtonElement>(null);
 
 	function installUpdate() {
