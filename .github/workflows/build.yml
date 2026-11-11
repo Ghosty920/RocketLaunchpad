@@ -35,7 +35,7 @@ jobs:
           echo "GIT_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
           echo "BUILD_MODE=debug" >> $GITHUB_ENV
       - name: Build
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_STATS_WEBSITE_ID: ${{ vars.VITE_DEV_STATS_WEBSITE_ID }}
