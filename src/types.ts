@@ -5,6 +5,7 @@ export type Config = {
 	ShowStatsPage: boolean;
 	UseEac: boolean;
 	UpdateChecker: boolean;
+	ProxyUrl: string;
 };
 
 export type Account = {

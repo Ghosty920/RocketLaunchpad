@@ -18,6 +18,8 @@ pub struct Config {
     pub use_eac: bool,
     #[serde(default)]
     pub update_checker: bool,
+    #[serde(default)]
+    pub proxy_url: String,
 }
 
 impl Default for Config {
@@ -29,6 +31,7 @@ impl Default for Config {
             show_stats_page: true,
             use_eac: true,
             update_checker: true,
+            proxy_url: String::new(),
         }
     }
 }
@@ -42,6 +45,7 @@ pub struct ConfigUpdate {
     pub show_stats_page: Option<bool>,
     pub use_eac: Option<bool>,
     pub update_checker: Option<bool>,
+    pub proxy_url: Option<String>,
 }
 
 fn config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -60,6 +64,11 @@ fn merge_config(existing: Config, incoming: ConfigUpdate) -> Config {
         show_stats_page: incoming.show_stats_page.unwrap_or(existing.show_stats_page),
         use_eac: incoming.use_eac.unwrap_or(existing.use_eac),
         update_checker: incoming.update_checker.unwrap_or(existing.update_checker),
+        proxy_url: incoming
+            .proxy_url
+            .unwrap_or(existing.proxy_url)
+            .trim()
+            .to_string(),
     }
 }
 

@@ -23,6 +23,7 @@ export default function ConfigProvider({ children }: { children: React.ReactNode
 		ShowStatsPage: true,
 		UseEac: true,
 		UpdateChecker: true,
+		ProxyUrl: '',
 	});
 
 	const [firstLoaded, setFirstLoaded] = useState<boolean>(false);
