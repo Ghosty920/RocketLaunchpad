@@ -46,10 +46,15 @@ pub fn http_client(app: &AppHandle) -> Result<Client, String> {
     let mut builder = Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36");
 
-    if !config.proxy_url.is_empty() {
+    let proxy_url = if let Some(rest) = config.proxy_url.strip_prefix("socks5://") {
+        format!("socks5h://{rest}")
+    } else {
+        config.proxy_url
+    };
+
+    if !proxy_url.is_empty() {
         builder = builder.proxy(
-            reqwest::Proxy::all(&config.proxy_url)
-                .map_err(|err| format!("Invalid proxy URL: {err}"))?,
+            reqwest::Proxy::all(&proxy_url).map_err(|err| format!("Invalid proxy URL: {err}"))?,
         );
     }
 

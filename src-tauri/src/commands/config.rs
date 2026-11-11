@@ -57,6 +57,16 @@ fn config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 }
 
 fn merge_config(existing: Config, incoming: ConfigUpdate) -> Config {
+    let proxy_url = incoming
+        .proxy_url
+        .unwrap_or(existing.proxy_url)
+        .trim()
+        .to_string();
+    let proxy_url = if let Some(rest) = proxy_url.strip_prefix("socks5://") {
+        format!("socks5h://{rest}")
+    } else {
+        proxy_url
+    };
     Config {
         launch_path: incoming.launch_path.unwrap_or(existing.launch_path),
         launch_args: incoming.launch_args.unwrap_or(existing.launch_args),
@@ -64,11 +74,7 @@ fn merge_config(existing: Config, incoming: ConfigUpdate) -> Config {
         show_stats_page: incoming.show_stats_page.unwrap_or(existing.show_stats_page),
         use_eac: incoming.use_eac.unwrap_or(existing.use_eac),
         update_checker: incoming.update_checker.unwrap_or(existing.update_checker),
-        proxy_url: incoming
-            .proxy_url
-            .unwrap_or(existing.proxy_url)
-            .trim()
-            .to_string(),
+        proxy_url,
     }
 }
 
