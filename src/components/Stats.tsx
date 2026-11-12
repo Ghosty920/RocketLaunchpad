@@ -29,16 +29,19 @@ export default function Stats() {
 
 	useEffect(() => {
 		(async () => {
+			const { VITE_APP_VERSION, VITE_GIT_SHA, VITE_BUILD_MODE } = import.meta.env;
+
 			const statsScript = document.createElement('script');
 			statsScript.defer = true;
 			statsScript.src = 'https://stats.ghosty.im/script.js';
 			statsScript.setAttribute('data-website-id', statsWebsiteId);
 			statsScript.setAttribute('data-performance', 'true');
+			statsScript.setAttribute('data-errors', 'true');
+			statsScript.setAttribute('data-release', VITE_APP_VERSION);
+			statsScript.setAttribute('data-environment', VITE_BUILD_MODE);
 			document.head.appendChild(statsScript);
 
 			let lastSettings: Partial<ConfigNoPath> = {};
-
-			const { VITE_APP_VERSION, VITE_GIT_SHA, VITE_BUILD_MODE } = import.meta.env;
 
 			const refresh = () => {
 				if (window.umami) {
