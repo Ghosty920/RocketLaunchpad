@@ -29,6 +29,8 @@ jobs:
           workspaces: ./src-tauri -> target
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Validate
+        run: pnpm validate
       - name: Extract metadata
         shell: bash
         run: |
