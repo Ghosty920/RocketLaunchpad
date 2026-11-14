@@ -149,15 +149,25 @@ function MethodShareCode({
 			const code = inputRef.current?.value.trim();
 			if (!code || code.length < 50) throw new Error('Code inexistent or too short');
 			const data = JSON.parse(utf8.decode(base64.decode(code)));
-			if (!data.Username || !data.AccountId || !data.AuthDeviceId || !data.AuthSecret)
+			const hasPermanentCredentials = data.AuthDeviceId && data.AuthSecret;
+			const hasAccessToken = data.AccessToken;
+			const hasRefreshToken = data.RefreshToken;
+			if (!data.Username || !data.AccountId || (!hasPermanentCredentials && !hasAccessToken && !hasRefreshToken))
 				throw new Error('Code is missing required fields');
 
+			data.AuthDeviceId ??= '';
+			data.AuthSecret ??= '';
+			data.AccessToken ??= null;
+			data.AccessExpiresAt ??= null;
+			data.RefreshToken ??= null;
+			data.RefreshExpiresAt ??= null;
+			data.ExpiresAt = data.RefreshToken ? data.RefreshExpiresAt : data.AccessExpiresAt;
 			await invoke('add_account', { account: data });
 			onAdd(data);
 			close(true);
 		} catch (e) {
 			console.error(e);
-			setError('Invalid share code');
+			setError(e instanceof Error ? e.message : 'Invalid share code');
 		} finally {
 			setWorking(false);
 		}
