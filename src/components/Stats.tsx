@@ -37,7 +37,9 @@ export default function Stats() {
 			statsScript.setAttribute('data-website-id', statsWebsiteId);
 			statsScript.setAttribute('data-performance', 'true');
 			statsScript.setAttribute('data-errors', 'true');
-			statsScript.setAttribute('data-release', VITE_APP_VERSION);
+			if (VITE_APP_VERSION) {
+				statsScript.setAttribute('data-release', VITE_APP_VERSION);
+			}
 			statsScript.setAttribute('data-environment', VITE_BUILD_MODE);
 			document.head.appendChild(statsScript);
 
