@@ -151,9 +151,19 @@ pub async fn launch_game(
     let client = http_client(&app)?;
     let mut account = get_account(app.clone(), account_id)?;
 
-    // Refresh if the access token is expired
+    // Refresh the access token when possible, preferring the shared refresh token
     if expired(account.access_expires_at.unwrap_or(0)) {
-        crate::commands::login::use_device_auth(&client, &mut account).await?;
+        if account
+            .refresh_token
+            .as_ref()
+            .is_some_and(|_| !expired(account.refresh_expires_at.unwrap_or(0)))
+        {
+            crate::commands::login::use_refresh_token(&client, &mut account).await?;
+        } else if !account.auth_device_id.is_empty() && !account.auth_secret.is_empty() {
+            crate::commands::login::use_device_auth(&client, &mut account).await?;
+        } else {
+            return Err("The shared account credentials have expired.".to_string());
+        }
         update_account(&app, account.clone())?;
     }
 

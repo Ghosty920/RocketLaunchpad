@@ -127,15 +127,56 @@ pub async fn use_device_auth(client: &Client, account: &mut Account) -> Result<(
         .json()
         .await
         .map_err(|e| format!("UseDeviceAuth parse failed: {e}"))?;
+    update_tokens(account, &json)?;
     account.username = json["displayName"]
         .as_str()
         .ok_or("No displayName")?
         .to_string();
-    account.access_token = json["access_token"].as_str().map(|s| s.to_string());
-    account.access_expires_at = json["expires_at"].as_str().map(|s| parse_date(s));
-    account.refresh_token = json["refresh_token"].as_str().map(|s| s.to_string());
-    account.refresh_expires_at = json["refresh_expires_at"].as_str().map(|s| parse_date(s));
 
+    Ok(())
+}
+
+pub async fn use_refresh_token(client: &Client, account: &mut Account) -> Result<(), String> {
+    let refresh_token = account.refresh_token.as_deref().ok_or("No refresh token")?;
+    let content = format!("grant_type=refresh_token&refresh_token={refresh_token}");
+
+    let res = client
+        .post("https://account-public-service-prod.ol.epicgames.com/account/api/oauth/token")
+        .header("Authorization", format!("Basic {AUTH_TOKEN}"))
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(content)
+        .send()
+        .await
+        .map_err(|e| format!("Refresh token request failed: {e}"))?;
+
+    if !res.status().is_success() {
+        return Err(format!("Refresh token HTTP error: {}", res.status()));
+    }
+
+    let json: Value = res
+        .json()
+        .await
+        .map_err(|e| format!("Refresh token parse failed: {e}"))?;
+    update_tokens(account, &json)?;
+    account.username = json["displayName"]
+        .as_str()
+        .ok_or("No displayName")?
+        .to_string();
+
+    Ok(())
+}
+
+fn update_tokens(account: &mut Account, json: &Value) -> Result<(), String> {
+    account.access_token = json["access_token"].as_str().map(|s| s.to_string());
+    account.access_expires_at = json["expires_at"].as_str().map(parse_date);
+    account.refresh_token = json["refresh_token"]
+        .as_str()
+        .map(|s| s.to_string())
+        .or_else(|| account.refresh_token.clone());
+    account.refresh_expires_at = json["refresh_expires_at"]
+        .as_str()
+        .map(parse_date)
+        .or(account.refresh_expires_at);
     Ok(())
 }
 
