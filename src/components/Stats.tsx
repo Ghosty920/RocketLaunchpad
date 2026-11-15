@@ -40,7 +40,7 @@ export default function Stats() {
 			if (VITE_APP_VERSION) {
 				statsScript.setAttribute('data-release', VITE_APP_VERSION);
 			}
-			statsScript.setAttribute('data-environment', VITE_BUILD_MODE);
+			statsScript.setAttribute('data-environment', VITE_BUILD_MODE ?? 'development');
 			document.head.appendChild(statsScript);
 
 			let lastSettings: Partial<ConfigNoPath> = {};
