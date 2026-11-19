@@ -1,4 +1,4 @@
-use crate::commands::account::{Account, add_account};
+use crate::commands::account::{Account, add_account, is_permanent_account};
 use crate::tools::webview::build_window;
 use crate::utils::{self, AUTH_CLIENT_ID, AUTH_TOKEN, parse_date};
 use base64::{Engine as _, engine::general_purpose};
@@ -173,10 +173,26 @@ fn update_tokens(account: &mut Account, json: &Value) -> Result<(), String> {
         .as_str()
         .map(|s| s.to_string())
         .or_else(|| account.refresh_token.clone());
-    account.refresh_expires_at = json["refresh_expires_at"]
-        .as_str()
-        .map(parse_date)
-        .or(account.refresh_expires_at);
+    let previous_refresh_expires_at = account.refresh_expires_at;
+    let returned_refresh_expires_at = json["refresh_expires_at"].as_str().map(parse_date);
+    account.refresh_expires_at = if is_permanent_account(account) {
+        returned_refresh_expires_at.or(previous_refresh_expires_at)
+    } else {
+        // Temporary shares must not outlive their original expiry, even if the
+        // server issues a sliding refresh token
+        match (previous_refresh_expires_at, returned_refresh_expires_at) {
+            (Some(previous), Some(returned)) => Some(previous.min(returned)),
+            (previous, returned) => returned.or(previous),
+        }
+    };
+    // Also keep the access token from outliving the temporary share's deadline
+    if !is_permanent_account(account) {
+        if let (Some(access_expires_at), Some(deadline)) =
+            (account.access_expires_at, account.refresh_expires_at)
+        {
+            account.access_expires_at = Some(access_expires_at.min(deadline));
+        }
+    }
     Ok(())
 }
 
