@@ -1,4 +1,4 @@
-use crate::commands::account::{get_account, update_account};
+use crate::commands::account::{get_account, is_permanent_account, update_account};
 use crate::commands::config::get_config;
 use crate::tools::webview::build_window;
 use crate::utils::{AUTH_EGL_TOKEN, expired, http_client};
@@ -151,15 +151,26 @@ pub async fn launch_game(
     let client = http_client(&app)?;
     let mut account = get_account(app.clone(), account_id)?;
 
+    let is_temporary = !is_permanent_account(&account);
+    let temporary_deadline = if account.refresh_token.is_some() {
+        account.refresh_expires_at
+    } else {
+        account.access_expires_at
+    };
+    if is_temporary && temporary_deadline.is_some_and(expired) {
+        return Err("The shared account credentials have expired.".to_string());
+    }
+
     // Refresh the access token when possible, preferring the shared refresh token
-    if expired(account.access_expires_at.unwrap_or(0)) {
+    if account.access_token.is_none() || expired(account.access_expires_at.unwrap_or(0)) {
+        let has_device_auth = !is_temporary;
         if account
             .refresh_token
             .as_ref()
             .is_some_and(|_| !expired(account.refresh_expires_at.unwrap_or(0)))
         {
             crate::commands::login::use_refresh_token(&client, &mut account).await?;
-        } else if !account.auth_device_id.is_empty() && !account.auth_secret.is_empty() {
+        } else if has_device_auth {
             crate::commands::login::use_device_auth(&client, &mut account).await?;
         } else {
             return Err("The shared account credentials have expired.".to_string());
@@ -203,6 +214,11 @@ pub async fn launch_game(
 
     println!("{}", path);
     println!("{:#?}", args);
+
+    // The exchange requests above may have outlived the temporary deadline
+    if is_temporary && temporary_deadline.is_some_and(expired) {
+        return Err("The shared account credentials have expired.".to_string());
+    }
 
     Command::new(&path)
         .args(&args)
