@@ -162,6 +162,9 @@ function MethodShareCode({
 			data.RefreshToken ??= null;
 			data.RefreshExpiresAt ??= null;
 			data.ExpiresAt = data.RefreshToken ? data.RefreshExpiresAt : data.AccessExpiresAt;
+			if (!hasPermanentCredentials && typeof data.ExpiresAt === 'number' && data.ExpiresAt <= Date.now())
+				throw new Error('Share code has expired');
+
 			await invoke('add_account', { account: data });
 			onAdd(data);
 			close(true);
