@@ -166,7 +166,7 @@ function MethodShareCode({
 			data.AuthDeviceId ??= '';
 			data.AuthSecret ??= '';
 			data.AccessToken ??= null;
-			data.AccessExpiresAt ??= null;
+			data.AccessExpiresAt = data.AccessToken ? (data.AccessExpiresAt ?? null) : null;
 			data.RefreshToken ??= null;
 			data.RefreshExpiresAt ??= null;
 			data.ExpiresAt = hasPermanentCredentials ? null : expiresAt;
