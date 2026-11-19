@@ -152,8 +152,14 @@ function MethodShareCode({
 			const hasPermanentCredentials = data.AuthDeviceId && data.AuthSecret;
 			const hasAccessToken = data.AccessToken;
 			const hasRefreshToken = data.RefreshToken;
+			const expiresAt = hasRefreshToken ? data.RefreshExpiresAt : data.AccessExpiresAt;
 			if (!data.Username || !data.AccountId || (!hasPermanentCredentials && !hasAccessToken && !hasRefreshToken))
 				throw new Error('Code is missing required fields');
+			if (!hasPermanentCredentials) {
+				if (!expiresAt) throw new Error('Temporary code is missing an expiry');
+				if (typeof expiresAt !== 'number') throw new Error('Expiry is not a number');
+				if (expiresAt <= Date.now()) throw new Error('Temporary code has expired');
+			}
 
 			data.AuthDeviceId ??= '';
 			data.AuthSecret ??= '';
@@ -161,9 +167,7 @@ function MethodShareCode({
 			data.AccessExpiresAt ??= null;
 			data.RefreshToken ??= null;
 			data.RefreshExpiresAt ??= null;
-			data.ExpiresAt = data.RefreshToken ? data.RefreshExpiresAt : data.AccessExpiresAt;
-			if (!hasPermanentCredentials && typeof data.ExpiresAt === 'number' && data.ExpiresAt <= Date.now())
-				throw new Error('Share code has expired');
+			data.ExpiresAt = expiresAt;
 
 			await invoke('add_account', { account: data });
 			onAdd(data);
