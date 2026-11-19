@@ -48,6 +48,7 @@ export default function App() {
 	const [accounts, setAccounts] = useState<Account[] | null>(null);
 	const [launchingAccount, setLaunchingAccount] = useState<Account | null>(null);
 	const [launchError, setLaunchError] = useState<string | null>(null);
+	const [accountsError, setAccountsError] = useState<string | null>(null);
 	const { config, firstLoaded: configFirstLoaded } = useContext(ConfigContext)!;
 
 	useEffect(() => {
@@ -99,6 +100,21 @@ export default function App() {
 			setLaunchingAccount(null);
 		} catch (error: any) {
 			setLaunchError(error.toString());
+		} finally {
+			setAccountsError(null);
+			try {
+				const latestAccounts = await invoke<Account[]>('get_accounts');
+				setAccounts(prev => {
+					if (!prev) return latestAccounts;
+					const latestById = new Map(latestAccounts.map(account => [account.AccountId, account]));
+					return prev.map(account => latestById.get(account.AccountId) ?? account);
+				});
+			} catch (error) {
+				console.error(error);
+				setAccountsError(
+					typeof error === 'string' ? error : error instanceof Error ? error.message : String(error)
+				);
+			}
 		}
 	};
 
@@ -213,6 +229,23 @@ export default function App() {
 				{launchError?.startsWith('Game path') || (
 					<p className='text-xs'>you might want to check your connection, or reconnect the account.</p>
 				)}
+			</Modal>
+
+			<Modal
+				open={!!accountsError}
+				onClose={() => setAccountsError(null)}
+				title='Account list refresh failed'
+				actions={
+					<button
+						className='inline-flex items-center gap-2 rounded-md bg-white/10 px-4 py-2 text-lg hover:bg-white/20'
+						onClick={() => setAccountsError(null)}
+					>
+						<X size={18} strokeWidth={2} /> Close
+					</button>
+				}
+			>
+				<p>The account list could not be refreshed. Your current list is unchanged.</p>
+				<p className='text-red-300'>{accountsError}</p>
 			</Modal>
 		</main>
 	);

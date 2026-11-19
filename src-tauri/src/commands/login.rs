@@ -1,4 +1,4 @@
-use crate::commands::account::{Account, add_account};
+use crate::commands::account::{Account, add_account, is_permanent_account};
 use crate::tools::webview::build_window;
 use crate::utils::{self, AUTH_CLIENT_ID, AUTH_TOKEN, parse_date};
 use base64::{Engine as _, engine::general_purpose};
@@ -127,15 +127,90 @@ pub async fn use_device_auth(client: &Client, account: &mut Account) -> Result<(
         .json()
         .await
         .map_err(|e| format!("UseDeviceAuth parse failed: {e}"))?;
+    update_tokens(account, &json)?;
     account.username = json["displayName"]
         .as_str()
         .ok_or("No displayName")?
         .to_string();
-    account.access_token = json["access_token"].as_str().map(|s| s.to_string());
-    account.access_expires_at = json["expires_at"].as_str().map(|s| parse_date(s));
-    account.refresh_token = json["refresh_token"].as_str().map(|s| s.to_string());
-    account.refresh_expires_at = json["refresh_expires_at"].as_str().map(|s| parse_date(s));
 
+    Ok(())
+}
+
+/// Outcome of a refresh-token exchange
+pub enum RefreshError {
+    /// The server rejected the refresh token; the stored token should be discarded
+    Rejected(String),
+    /// A network, timeout, or server-side failure; the stored token may still be valid
+    Transient(String),
+}
+
+pub async fn use_refresh_token(client: &Client, account: &mut Account) -> Result<(), RefreshError> {
+    let refresh_token = account
+        .refresh_token
+        .as_deref()
+        .ok_or_else(|| RefreshError::Rejected("No refresh token".to_string()))?;
+    let content = format!("grant_type=refresh_token&refresh_token={refresh_token}");
+
+    let res = client
+        .post("https://account-public-service-prod.ol.epicgames.com/account/api/oauth/token")
+        .header("Authorization", format!("Basic {AUTH_TOKEN}"))
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(content)
+        .send()
+        .await
+        .map_err(|e| RefreshError::Transient(format!("Refresh token request failed: {e}")))?;
+
+    let status = res.status();
+
+    if !status.is_success() {
+        let message = format!("Refresh token HTTP error: {status}");
+        return Err(if matches!(status.as_u16(), 400 | 401 | 403) {
+            RefreshError::Rejected(message)
+        } else {
+            RefreshError::Transient(message)
+        });
+    }
+
+    let json: Value = res
+        .json()
+        .await
+        .map_err(|e| RefreshError::Transient(format!("Refresh token parse failed: {e}")))?;
+    update_tokens(account, &json).map_err(RefreshError::Transient)?;
+    account.username = json["displayName"]
+        .as_str()
+        .ok_or_else(|| RefreshError::Transient("No displayName".to_string()))?
+        .to_string();
+
+    Ok(())
+}
+
+fn update_tokens(account: &mut Account, json: &Value) -> Result<(), String> {
+    account.access_token = json["access_token"].as_str().map(|s| s.to_string());
+    account.access_expires_at = json["expires_at"].as_str().map(parse_date);
+    account.refresh_token = json["refresh_token"]
+        .as_str()
+        .map(|s| s.to_string())
+        .or_else(|| account.refresh_token.clone());
+    let previous_refresh_expires_at = account.refresh_expires_at;
+    let returned_refresh_expires_at = json["refresh_expires_at"].as_str().map(parse_date);
+    account.refresh_expires_at = if is_permanent_account(account) {
+        returned_refresh_expires_at.or(previous_refresh_expires_at)
+    } else {
+        // Temporary shares must not outlive their original expiry, even if the
+        // server issues a sliding refresh token
+        match (previous_refresh_expires_at, returned_refresh_expires_at) {
+            (Some(previous), Some(returned)) => Some(previous.min(returned)),
+            (previous, returned) => returned.or(previous),
+        }
+    };
+    // Also keep the access token from outliving the temporary share's deadline
+    if !is_permanent_account(account) {
+        if let (Some(access_expires_at), Some(deadline)) =
+            (account.access_expires_at, account.refresh_expires_at)
+        {
+            account.access_expires_at = Some(access_expires_at.min(deadline));
+        }
+    }
     Ok(())
 }
 

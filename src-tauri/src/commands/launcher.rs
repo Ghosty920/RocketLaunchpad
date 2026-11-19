@@ -1,5 +1,6 @@
-use crate::commands::account::{get_account, update_account};
+use crate::commands::account::{get_account, is_permanent_account, update_account};
 use crate::commands::config::get_config;
+use crate::commands::login::{RefreshError, use_device_auth, use_refresh_token};
 use crate::tools::webview::build_window;
 use crate::utils::{AUTH_EGL_TOKEN, expired, http_client};
 use serde_json::Value;
@@ -151,9 +152,47 @@ pub async fn launch_game(
     let client = http_client(&app)?;
     let mut account = get_account(app.clone(), account_id)?;
 
-    // Refresh if the access token is expired
-    if expired(account.access_expires_at.unwrap_or(0)) {
-        crate::commands::login::use_device_auth(&client, &mut account).await?;
+    let is_temporary = !is_permanent_account(&account);
+    let temporary_deadline = if account.refresh_token.is_some() {
+        account.refresh_expires_at
+    } else {
+        account.access_expires_at
+    };
+    if is_temporary && temporary_deadline.is_some_and(expired) {
+        return Err("The shared account credentials have expired.".to_string());
+    }
+
+    // Refresh the access token when possible, preferring the shared refresh token
+    if account.access_token.is_none() || expired(account.access_expires_at.unwrap_or(0)) {
+        let has_device_auth = !is_temporary;
+        let has_refresh_token = account
+            .refresh_token
+            .as_ref()
+            .is_some_and(|_| !expired(account.refresh_expires_at.unwrap_or(0)));
+
+        if has_refresh_token {
+            match use_refresh_token(&client, &mut account).await {
+                Ok(()) => {}
+                Err(RefreshError::Rejected(err)) => {
+                    // The refresh token is no longer valid; discard it so future
+                    // launches don't retry it and can fall back to device auth
+                    account.refresh_token = None;
+                    account.refresh_expires_at = None;
+                    update_account(&app, account.clone())?;
+
+                    if !has_device_auth {
+                        return Err(err);
+                    }
+                    use_device_auth(&client, &mut account).await?;
+                }
+                // Network failures and timeouts must not invalidate stored tokens
+                Err(RefreshError::Transient(err)) => return Err(err),
+            }
+        } else if has_device_auth {
+            use_device_auth(&client, &mut account).await?;
+        } else {
+            return Err("The shared account credentials have expired.".to_string());
+        }
         update_account(&app, account.clone())?;
     }
 
@@ -193,6 +232,11 @@ pub async fn launch_game(
 
     println!("{}", path);
     println!("{:#?}", args);
+
+    // The exchange requests above may have outlived the temporary deadline
+    if is_temporary && temporary_deadline.is_some_and(expired) {
+        return Err("The shared account credentials have expired.".to_string());
+    }
 
     Command::new(&path)
         .args(&args)

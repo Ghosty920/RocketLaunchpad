@@ -11,6 +11,7 @@ import utf8 from 'utf8';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import LoginModal from '../LoginProcess';
 import StatsPage from '../pages/StatsPage';
+import { formatRemaining, truncate } from '../lib/utils';
 
 function Loading() {
 	return (
@@ -25,25 +26,47 @@ function Loading() {
 function ModalAccountShare({ accountId, open, onClose }: { accountId: string; open: boolean; onClose: () => void }) {
 	const copyBtnRef = useRef<HTMLButtonElement | null>(null);
 	const [copyAnimTimeout, setCopyAnimTimeout] = useState<NodeJS.Timeout>();
+	const [shareMode, setShareMode] = useState<'permanent' | 'access' | 'refresh'>('permanent');
 	const [data, setData] = useState<string | null>(null);
+	const [account, setAccount] = useState<FullAccount | null>(null);
 
 	useEffect(() => {
 		if (!open) return;
+		setData(null);
+		setAccount(null);
 		invoke<FullAccount>('get_account', { accountId })
 			.then(result => {
-				const data = {
-					Username: result.Username,
-					AccountId: result.AccountId,
-					AuthDeviceId: result.AuthDeviceId,
-					AuthSecret: result.AuthSecret,
-				};
-				setData(base64.encode(utf8.encode(JSON.stringify(data))));
+				setAccount(result);
 			})
 			.catch((err: Error) => {
 				console.error(err);
 				setData(err.toString());
 			});
 	}, [open, accountId]);
+
+	useEffect(() => {
+		if (!account) return;
+		const sharedAccount = {
+			Username: account.Username,
+			AccountId: account.AccountId,
+			AuthDeviceId: shareMode === 'permanent' ? account.AuthDeviceId : '',
+			AuthSecret: shareMode === 'permanent' ? account.AuthSecret : '',
+			AccessToken: shareMode === 'permanent' ? null : account.AccessToken,
+			AccessExpiresAt: shareMode === 'permanent' ? null : account.AccessExpiresAt,
+			RefreshToken: shareMode === 'refresh' ? account.RefreshToken : null,
+			RefreshExpiresAt: shareMode === 'refresh' ? account.RefreshExpiresAt : null,
+		};
+		setData(base64.encode(utf8.encode(JSON.stringify(sharedAccount))));
+	}, [account, shareMode]);
+
+	const expiration =
+		shareMode === 'access' ? account?.AccessExpiresAt : shareMode === 'refresh' ? account?.RefreshExpiresAt : null;
+	const expirationText = expiration
+		? new Date(expiration).toLocaleString()
+		: shareMode === 'permanent'
+			? 'No expiration'
+			: 'Expiration unavailable';
+	const shareExpired = expiration != null && expiration <= Date.now();
 
 	const copyToClipboard = async () => {
 		if (!data) return;
@@ -89,9 +112,44 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 				<>
 					Here is a code you can use to share your account. Please note that anyone who has this can launch
 					the game with your account, so only share it with people you trust!
-					<div className='mt-4 p-4 bg-gray-200/40 rounded-md font-mono text-sm select-all break-all'>
-						{data}
+					<div className='mt-4 grid grid-cols-3 gap-1 rounded-lg bg-black/20 p-1 text-base'>
+						{(
+							[
+								['permanent', 'Permanent'],
+								['access', 'Temporary'],
+								['refresh', 'Longer'],
+							] as const
+						).map(([mode, label]) => (
+							<button
+								key={mode}
+								className={`rounded-md px-2 py-2 disabled:cursor-not-allowed disabled:opacity-40 ${shareMode === mode ? 'bg-indigo-600' : 'hover:bg-white/10'}`}
+								onClick={() => setShareMode(mode)}
+								disabled={
+									mode === 'access'
+										? !account?.AccessToken
+										: mode === 'refresh'
+											? !account?.RefreshToken
+											: false
+								}
+							>
+								{label}
+							</button>
+						))}
 					</div>
+					<div className='mt-2 text-base text-white/70'>
+						{shareMode === 'permanent'
+							? 'Includes the device credentials and does not expire.'
+							: `Valid until: ${expirationText}`}
+					</div>
+					{shareExpired ? (
+						<div className='mt-2 rounded-md bg-red-900/50 p-3 text-base text-red-200'>
+							This share code has expired. Launch the game with this account first to update its tokens.
+						</div>
+					) : (
+						<div className='mt-4 overflow-hidden rounded-md bg-gray-200/40 p-4 font-mono text-sm select-none break-all blur-sm transition-[filter] duration-500 hover:blur-none'>
+							{truncate(data, 51 * 7 + 2)}
+						</div>
+					)}
 				</>
 			) : (
 				<LoadingDots number={7} />
@@ -113,6 +171,7 @@ export default function AccountElem({
 	isDragOver,
 	onDragHandlePointerDown,
 	registerRef,
+	now,
 }: {
 	account: Account | null;
 	onDelete?: (account: Account) => void | Promise<void>;
@@ -124,6 +183,7 @@ export default function AccountElem({
 	isDragOver?: boolean;
 	onDragHandlePointerDown?: () => void;
 	registerRef?: (node: HTMLDivElement | null) => void;
+	now?: number;
 }) {
 	if (!account) {
 		return <Loading />;
@@ -135,6 +195,8 @@ export default function AccountElem({
 
 	const isLaunching = Boolean(launchingAccount?.AccountId);
 	const isLaunchingThis = launchingAccount?.AccountId === account.AccountId;
+	const isTemporary = account.ExpiresAt != null;
+	const remainingSeconds = isTemporary && now ? Math.max(0, Math.ceil((account.ExpiresAt! - now) / 1000)) : null;
 
 	const pointerStart = useRef<{ x: number; y: number } | null>(null);
 	const dragTriggered = useRef(false);
@@ -230,6 +292,7 @@ export default function AccountElem({
 						key='2'
 						className='bg-sky-800! hover:bg-sky-600!'
 						onClick={() => setIsShareOpen(true)}
+						disabled={isTemporary}
 					>
 						<Share2 size={22} strokeWidth={2} /> Share Account
 					</ContextMenuOption>,
@@ -244,13 +307,18 @@ export default function AccountElem({
 			>
 				<div
 					onClick={onClick}
-					className={`w-full h-20 bg-gray-200/40 rounded-xl flex items-center justify-center cursor-pointer duration-400 transition-all ${
+					className={`w-full h-20 bg-gray-200/40 rounded-xl flex flex-col items-center justify-center cursor-pointer duration-400 transition-all ${
+						isTemporary ? 'border border-red-300/70' : ''
+					} ${
 						isLaunchingThis
 							? 'scale-105 shadow-[0_0_14px_rgba(128,239,128,1)]!'
 							: 'hover:scale-103 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]'
 					}`}
 				>
 					<h3 className='overflow-hidden text-ellipsis whitespace-nowrap px-2'>{account.Username}</h3>
+					{remainingSeconds !== null && (
+						<span className='text-sm text-red-200'>Expires in {formatRemaining(remainingSeconds)}</span>
+					)}
 				</div>
 			</ContextMenu>
 			<Modal

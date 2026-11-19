@@ -149,15 +149,34 @@ function MethodShareCode({
 			const code = inputRef.current?.value.trim();
 			if (!code || code.length < 50) throw new Error('Code inexistent or too short');
 			const data = JSON.parse(utf8.decode(base64.decode(code)));
-			if (!data.Username || !data.AccountId || !data.AuthDeviceId || !data.AuthSecret)
+			const hasPermanentCredentials = data.AuthDeviceId && data.AuthSecret;
+			if (Boolean(data.AuthDeviceId) !== Boolean(data.AuthSecret))
+				throw new Error('Code has incomplete device credentials');
+			const hasAccessToken = data.AccessToken;
+			const hasRefreshToken = data.RefreshToken;
+			const expiresAt = hasRefreshToken ? data.RefreshExpiresAt : data.AccessExpiresAt;
+			if (!data.Username || !data.AccountId || (!hasPermanentCredentials && !hasAccessToken && !hasRefreshToken))
 				throw new Error('Code is missing required fields');
+			if (!hasPermanentCredentials) {
+				if (!expiresAt) throw new Error('Temporary code is missing an expiry');
+				if (typeof expiresAt !== 'number') throw new Error('Expiry is not a number');
+				if (expiresAt <= Date.now()) throw new Error('Temporary code has expired');
+			}
+
+			data.AuthDeviceId ??= '';
+			data.AuthSecret ??= '';
+			data.AccessToken ??= null;
+			data.AccessExpiresAt = data.AccessToken ? (data.AccessExpiresAt ?? null) : null;
+			data.RefreshToken ??= null;
+			data.RefreshExpiresAt ??= null;
+			data.ExpiresAt = hasPermanentCredentials ? null : expiresAt;
 
 			await invoke('add_account', { account: data });
 			onAdd(data);
 			close(true);
 		} catch (e) {
 			console.error(e);
-			setError('Invalid share code');
+			setError(typeof e === 'string' ? e : e instanceof Error ? e.message : 'Invalid share code');
 		} finally {
 			setWorking(false);
 		}

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AccountElem from './Account';
 import { Account } from '../types';
 
@@ -21,6 +21,12 @@ export default function AccountsList({
 }) {
 	const [draggedId, setDraggedId] = useState<string | null>(null);
 	const [dragOverId, setDragOverId] = useState<string | null>(null);
+	const [now, setNow] = useState(() => Date.now());
+
+	useEffect(() => {
+		const interval = setInterval(() => setNow(Date.now()), 1000);
+		return () => clearInterval(interval);
+	}, []);
 
 	const draggedIdRef = useRef<string | null>(null);
 	const dragOverIdRef = useRef<string | null>(null);
@@ -87,24 +93,27 @@ export default function AccountsList({
 
 	return (
 		<>
-			{accounts.map(account => (
-				<AccountElem
-					key={account.AccountId}
-					account={account}
-					onDelete={onDelete}
-					onLaunch={onLaunch}
-					launchingAccount={launchingAccount}
-					page={page}
-					switchPage={switchPage}
-					isDragging={draggedId === account.AccountId}
-					isDragOver={dragOverId === account.AccountId && draggedId !== account.AccountId}
-					onDragHandlePointerDown={() => startDrag(account.AccountId)}
-					registerRef={(node: HTMLDivElement | null) => {
-						if (node) itemRefs.current.set(account.AccountId, node);
-						else itemRefs.current.delete(account.AccountId);
-					}}
-				/>
-			))}
+			{accounts
+				.filter(account => account.ExpiresAt == null || account.ExpiresAt > now)
+				.map(account => (
+					<AccountElem
+						key={account.AccountId}
+						account={account}
+						onDelete={onDelete}
+						onLaunch={onLaunch}
+						launchingAccount={launchingAccount}
+						page={page}
+						switchPage={switchPage}
+						isDragging={draggedId === account.AccountId}
+						isDragOver={dragOverId === account.AccountId && draggedId !== account.AccountId}
+						onDragHandlePointerDown={() => startDrag(account.AccountId)}
+						registerRef={(node: HTMLDivElement | null) => {
+							if (node) itemRefs.current.set(account.AccountId, node);
+							else itemRefs.current.delete(account.AccountId);
+						}}
+						now={now}
+					/>
+				))}
 		</>
 	);
 }

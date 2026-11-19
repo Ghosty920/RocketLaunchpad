@@ -25,6 +25,11 @@ pub struct AccountInfo {
     pub username: String,
     pub account_id: String,
     pub auth_device_id: String,
+    pub expires_at: Option<i64>,
+}
+
+pub fn is_permanent_account(account: &Account) -> bool {
+    !account.auth_device_id.is_empty() && !account.auth_secret.is_empty()
 }
 
 pub fn accounts_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -167,10 +172,20 @@ pub fn get_accounts(app: tauri::AppHandle) -> Result<Vec<AccountInfo>, String> {
 
     Ok(accounts
         .into_iter()
-        .map(|a| AccountInfo {
-            username: a.username,
-            account_id: a.account_id,
-            auth_device_id: a.auth_device_id,
+        .map(|a| {
+            let is_permanent = is_permanent_account(&a);
+            AccountInfo {
+                username: a.username,
+                account_id: a.account_id,
+                auth_device_id: a.auth_device_id.clone(),
+                expires_at: if is_permanent {
+                    None
+                } else if a.refresh_token.is_some() {
+                    a.refresh_expires_at
+                } else {
+                    a.access_expires_at
+                },
+            }
         })
         .collect())
 }
@@ -194,7 +209,12 @@ pub fn get_account(app: tauri::AppHandle, account_id: String) -> Result<Account,
 #[tauri::command]
 pub fn add_account(app: tauri::AppHandle, account: Account) -> Result<(), String> {
     let mut accounts = get_raw_accounts(&app)?;
-    if accounts.iter().any(|a| a.account_id == account.account_id) {
+    if let Some(existing) = accounts.iter().find(|a| a.account_id == account.account_id) {
+        let existing_is_permanent = is_permanent_account(existing);
+        let incoming_is_permanent = is_permanent_account(&account);
+        if existing_is_permanent && !incoming_is_permanent {
+            return Err("A temporary share cannot replace a permanent account.".to_string());
+        }
         return update_account(&app, account);
     }
     accounts.push(encrypt_account(&account)?);
