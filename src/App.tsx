@@ -99,6 +99,8 @@ export default function App() {
 			setLaunchingAccount(null);
 		} catch (error: any) {
 			setLaunchError(error.toString());
+		} finally {
+			setAccounts(await invoke<Account[]>('get_accounts'));
 		}
 	};
 
