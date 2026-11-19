@@ -176,7 +176,7 @@ function MethodShareCode({
 			close(true);
 		} catch (e) {
 			console.error(e);
-			setError(e instanceof Error ? e.message : 'Invalid share code');
+			setError(typeof e === 'string' ? e : e instanceof Error ? e.message : 'Invalid share code');
 		} finally {
 			setWorking(false);
 		}
