@@ -136,8 +136,19 @@ pub async fn use_device_auth(client: &Client, account: &mut Account) -> Result<(
     Ok(())
 }
 
-pub async fn use_refresh_token(client: &Client, account: &mut Account) -> Result<(), String> {
-    let refresh_token = account.refresh_token.as_deref().ok_or("No refresh token")?;
+/// Outcome of a refresh-token exchange
+pub enum RefreshError {
+    /// The server rejected the refresh token; the stored token should be discarded
+    Rejected(String),
+    /// A network, timeout, or server-side failure; the stored token may still be valid
+    Transient(String),
+}
+
+pub async fn use_refresh_token(client: &Client, account: &mut Account) -> Result<(), RefreshError> {
+    let refresh_token = account
+        .refresh_token
+        .as_deref()
+        .ok_or_else(|| RefreshError::Rejected("No refresh token".to_string()))?;
     let content = format!("grant_type=refresh_token&refresh_token={refresh_token}");
 
     let res = client
@@ -147,20 +158,27 @@ pub async fn use_refresh_token(client: &Client, account: &mut Account) -> Result
         .body(content)
         .send()
         .await
-        .map_err(|e| format!("Refresh token request failed: {e}"))?;
+        .map_err(|e| RefreshError::Transient(format!("Refresh token request failed: {e}")))?;
 
-    if !res.status().is_success() {
-        return Err(format!("Refresh token HTTP error: {}", res.status()));
+    let status = res.status();
+
+    if !status.is_success() {
+        let message = format!("Refresh token HTTP error: {status}");
+        return Err(if matches!(status.as_u16(), 400 | 401 | 403) {
+            RefreshError::Rejected(message)
+        } else {
+            RefreshError::Transient(message)
+        });
     }
 
     let json: Value = res
         .json()
         .await
-        .map_err(|e| format!("Refresh token parse failed: {e}"))?;
-    update_tokens(account, &json)?;
+        .map_err(|e| RefreshError::Transient(format!("Refresh token parse failed: {e}")))?;
+    update_tokens(account, &json).map_err(RefreshError::Transient)?;
     account.username = json["displayName"]
         .as_str()
-        .ok_or("No displayName")?
+        .ok_or_else(|| RefreshError::Transient("No displayName".to_string()))?
         .to_string();
 
     Ok(())

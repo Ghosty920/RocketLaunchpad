@@ -1,5 +1,6 @@
 use crate::commands::account::{get_account, is_permanent_account, update_account};
 use crate::commands::config::get_config;
+use crate::commands::login::{RefreshError, use_device_auth, use_refresh_token};
 use crate::tools::webview::build_window;
 use crate::utils::{AUTH_EGL_TOKEN, expired, http_client};
 use serde_json::Value;
@@ -164,14 +165,31 @@ pub async fn launch_game(
     // Refresh the access token when possible, preferring the shared refresh token
     if account.access_token.is_none() || expired(account.access_expires_at.unwrap_or(0)) {
         let has_device_auth = !is_temporary;
-        if account
+        let has_refresh_token = account
             .refresh_token
             .as_ref()
-            .is_some_and(|_| !expired(account.refresh_expires_at.unwrap_or(0)))
-        {
-            crate::commands::login::use_refresh_token(&client, &mut account).await?;
+            .is_some_and(|_| !expired(account.refresh_expires_at.unwrap_or(0)));
+
+        if has_refresh_token {
+            match use_refresh_token(&client, &mut account).await {
+                Ok(()) => {}
+                Err(RefreshError::Rejected(err)) => {
+                    // The refresh token is no longer valid; discard it so future
+                    // launches don't retry it and can fall back to device auth
+                    account.refresh_token = None;
+                    account.refresh_expires_at = None;
+                    update_account(&app, account.clone())?;
+
+                    if !has_device_auth {
+                        return Err(err);
+                    }
+                    use_device_auth(&client, &mut account).await?;
+                }
+                // Network failures and timeouts must not invalidate stored tokens
+                Err(RefreshError::Transient(err)) => return Err(err),
+            }
         } else if has_device_auth {
-            crate::commands::login::use_device_auth(&client, &mut account).await?;
+            use_device_auth(&client, &mut account).await?;
         } else {
             return Err("The shared account credentials have expired.".to_string());
         }
