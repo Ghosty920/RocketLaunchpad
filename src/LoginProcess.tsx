@@ -150,6 +150,8 @@ function MethodShareCode({
 			if (!code || code.length < 50) throw new Error('Code inexistent or too short');
 			const data = JSON.parse(utf8.decode(base64.decode(code)));
 			const hasPermanentCredentials = data.AuthDeviceId && data.AuthSecret;
+			if (Boolean(data.AuthDeviceId) !== Boolean(data.AuthSecret))
+				throw new Error('Code has incomplete device credentials');
 			const hasAccessToken = data.AccessToken;
 			const hasRefreshToken = data.RefreshToken;
 			const expiresAt = hasRefreshToken ? data.RefreshExpiresAt : data.AccessExpiresAt;
@@ -167,7 +169,7 @@ function MethodShareCode({
 			data.AccessExpiresAt ??= null;
 			data.RefreshToken ??= null;
 			data.RefreshExpiresAt ??= null;
-			data.ExpiresAt = expiresAt;
+			data.ExpiresAt = hasPermanentCredentials ? null : expiresAt;
 
 			await invoke('add_account', { account: data });
 			onAdd(data);
