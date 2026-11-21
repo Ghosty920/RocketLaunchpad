@@ -31,18 +31,22 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 	const [account, setAccount] = useState<FullAccount | null>(null);
 	const [refreshing, setRefreshing] = useState(false);
 	const [refreshError, setRefreshError] = useState<string | null>(null);
+	const loadTokenRef = useRef(0);
 
 	useEffect(() => {
 		if (!open) return;
+		const loadToken = ++loadTokenRef.current;
 		setData(null);
 		setAccount(null);
 		setRefreshError(null);
 		invoke<FullAccount>('get_account', { accountId })
 			.then(result => {
+				if (loadToken !== loadTokenRef.current) return;
 				setAccount(result);
 			})
 			.catch((err: Error) => {
 				console.error(err);
+				if (loadToken !== loadTokenRef.current) return;
 				setData(err.toString());
 			});
 	}, [open, accountId]);
@@ -91,6 +95,7 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 		setRefreshError(null);
 		try {
 			const refreshed = await invoke<FullAccount>('refresh_account', { accountId });
+			loadTokenRef.current += 1;
 			setAccount(refreshed);
 		} catch (error) {
 			setRefreshError(typeof error === 'string' ? error : error instanceof Error ? error.message : String(error));
