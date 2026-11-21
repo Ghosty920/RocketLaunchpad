@@ -149,6 +149,7 @@ function MethodShareCode({
 			const code = inputRef.current?.value.trim();
 			if (!code || code.length < 50) throw new Error('Code inexistent or too short');
 			const data = JSON.parse(utf8.decode(base64.decode(code)));
+			if (data.RefreshToken === '') data.RefreshToken = null;
 			const hasPermanentCredentials = data.AuthDeviceId && data.AuthSecret;
 			if (Boolean(data.AuthDeviceId) !== Boolean(data.AuthSecret))
 				throw new Error('Code has incomplete device credentials');
