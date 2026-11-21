@@ -8,9 +8,14 @@ updates:
       - dependencies
       - javascript
     groups:
+      tauri:
+        patterns:
+          - '@tauri-apps/*'
       node:
         patterns:
           - '*'
+        exclude-patterns:
+          - '@tauri-apps/*'
 
   - package-ecosystem: cargo
     directory: /src-tauri
@@ -20,9 +25,16 @@ updates:
       - dependencies
       - rust
     groups:
+      tauri:
+        patterns:
+          - 'tauri'
+          - 'tauri-*'
       rust:
         patterns:
           - '*'
+        exclude-patterns:
+          - 'tauri'
+          - 'tauri-*'
 
   - package-ecosystem: github-actions
     directory: /
