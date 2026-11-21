@@ -9,6 +9,24 @@ use std::sync::Mutex;
 use tauri::WebviewWindowBuilder;
 use tokio::sync::oneshot;
 
+/// Preserve a temporary share's effective expiry when a rejected refresh token
+/// is discarded: the deadline then falls back to `access_expires_at`, so cap it
+/// at the earlier of its current value and the refresh deadline
+fn cap_access_deadline_at_refresh_expiry(account: &mut Account, is_temporary: bool) {
+    if !is_temporary {
+        return;
+    }
+    if let Some(refresh_deadline) = account.refresh_expires_at {
+        account.access_expires_at = Some(
+            account
+                .access_expires_at
+                .map_or(refresh_deadline, |access_deadline| {
+                    access_deadline.min(refresh_deadline)
+                }),
+        );
+    }
+}
+
 #[tauri::command]
 pub async fn refresh_account(app: tauri::AppHandle, account_id: String) -> Result<Account, String> {
     let client = http_client(&app)?;
@@ -24,6 +42,7 @@ pub async fn refresh_account(app: tauri::AppHandle, account_id: String) -> Resul
         match use_refresh_token(&client, &mut account).await {
             Ok(()) => {}
             Err(RefreshError::Rejected(err)) => {
+                cap_access_deadline_at_refresh_expiry(&mut account, is_temporary);
                 account.refresh_token = None;
                 account.refresh_expires_at = None;
                 update_account(&app, account.clone())?;
@@ -213,6 +232,8 @@ pub async fn launch_game(
                 Err(RefreshError::Rejected(err)) => {
                     // The refresh token is no longer valid; discard it so future
                     // launches don't retry it and can fall back to device auth
+                    // Preserve a temporary share's effective deadline first
+                    cap_access_deadline_at_refresh_expiry(&mut account, !has_device_auth);
                     account.refresh_token = None;
                     account.refresh_expires_at = None;
                     update_account(&app, account.clone())?;
