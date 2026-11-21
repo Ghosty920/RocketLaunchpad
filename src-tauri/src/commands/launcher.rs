@@ -1,4 +1,4 @@
-use crate::commands::account::{get_account, is_permanent_account, update_account};
+use crate::commands::account::{Account, get_account, is_permanent_account, update_account};
 use crate::commands::config::get_config;
 use crate::commands::login::{RefreshError, use_device_auth, use_refresh_token};
 use crate::tools::webview::build_window;
@@ -8,6 +8,43 @@ use std::process::Command;
 use std::sync::Mutex;
 use tauri::WebviewWindowBuilder;
 use tokio::sync::oneshot;
+
+#[tauri::command]
+pub async fn refresh_account(app: tauri::AppHandle, account_id: String) -> Result<Account, String> {
+    let client = http_client(&app)?;
+    let mut account = get_account(app.clone(), account_id)?;
+    let is_temporary = !is_permanent_account(&account);
+
+    let has_refresh_token = account
+        .refresh_token
+        .as_ref()
+        .is_some_and(|_| !expired(account.refresh_expires_at.unwrap_or(0)));
+
+    if has_refresh_token {
+        match use_refresh_token(&client, &mut account).await {
+            Ok(()) => {}
+            Err(RefreshError::Rejected(err)) => {
+                account.refresh_token = None;
+                account.refresh_expires_at = None;
+                update_account(&app, account.clone())?;
+
+                if !is_temporary {
+                    use_device_auth(&client, &mut account).await?;
+                } else {
+                    return Err(err);
+                }
+            }
+            Err(RefreshError::Transient(err)) => return Err(err),
+        }
+    } else if is_temporary {
+        return Err("The shared account credentials have expired.".to_string());
+    } else {
+        use_device_auth(&client, &mut account).await?;
+    }
+
+    update_account(&app, account.clone())?;
+    Ok(account)
+}
 
 async fn get_oauth_exchange(
     client: &reqwest::Client,

@@ -1,7 +1,7 @@
 import { ReactElement, useContext, useEffect, useRef, useState } from 'react';
 import { Account, FullAccount } from '../types';
 import { ConfigContext } from '../ConfigProvider';
-import { ChartLine, CirclePlus, Copy, Share2, ShieldCheck, ShieldX, Trash2, X } from 'lucide-react';
+import { ChartLine, CirclePlus, Copy, RefreshCw, Share2, ShieldCheck, ShieldX, Trash2, X } from 'lucide-react';
 import ContextMenu, { ContextMenuOption } from './ContextMenu';
 import Modal from './Modal';
 import LoadingDots from './LoadingDots';
@@ -29,11 +29,14 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 	const [shareMode, setShareMode] = useState<'permanent' | 'access' | 'refresh'>('permanent');
 	const [data, setData] = useState<string | null>(null);
 	const [account, setAccount] = useState<FullAccount | null>(null);
+	const [refreshing, setRefreshing] = useState(false);
+	const [refreshError, setRefreshError] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!open) return;
 		setData(null);
 		setAccount(null);
+		setRefreshError(null);
 		invoke<FullAccount>('get_account', { accountId })
 			.then(result => {
 				setAccount(result);
@@ -82,6 +85,20 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 		}
 	};
 
+	const refreshAccount = async () => {
+		if (refreshing) return;
+		setRefreshing(true);
+		setRefreshError(null);
+		try {
+			const refreshed = await invoke<FullAccount>('refresh_account', { accountId });
+			setAccount(refreshed);
+		} catch (error) {
+			setRefreshError(typeof error === 'string' ? error : error instanceof Error ? error.message : String(error));
+		} finally {
+			setRefreshing(false);
+		}
+	};
+
 	return (
 		<Modal
 			open={open}
@@ -91,19 +108,29 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 				data && (
 					<>
 						<button
-							ref={copyBtnRef}
-							className='inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-lg hover:bg-indigo-500 disabled:opacity-60'
-							onClick={copyToClipboard}
-							disabled={!data}
+							className='mr-auto inline-flex items-center gap-2 rounded-md bg-white/10 px-4 py-2 text-lg hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60'
+							onClick={refreshAccount}
+							disabled={refreshing}
 						>
-							<Copy size={18} strokeWidth={2} /> Copy
+							<RefreshCw size={18} strokeWidth={2} className={refreshing ? 'animate-spin' : ''} />
+							Refresh
 						</button>
-						<button
-							className='inline-flex items-center gap-2 rounded-md bg-white/10 px-4 py-2 text-lg hover:bg-white/20'
-							onClick={onClose}
-						>
-							<X size={18} strokeWidth={2} /> Done
-						</button>
+						<div className='flex gap-3'>
+							<button
+								ref={copyBtnRef}
+								className='inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-lg hover:bg-indigo-500 disabled:opacity-60'
+								onClick={copyToClipboard}
+								disabled={!data}
+							>
+								<Copy size={18} strokeWidth={2} /> Copy
+							</button>
+							<button
+								className='inline-flex items-center gap-2 rounded-md bg-white/10 px-4 py-2 text-lg hover:bg-white/20'
+								onClick={onClose}
+							>
+								<X size={18} strokeWidth={2} /> Done
+							</button>
+						</div>
 					</>
 				)
 			}
@@ -148,6 +175,11 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 					) : (
 						<div className='mt-4 overflow-hidden rounded-md bg-gray-200/40 p-4 font-mono text-sm select-none break-all blur-sm transition-[filter] duration-500 hover:blur-none'>
 							{truncate(data, 51 * 7 + 2)}
+						</div>
+					)}
+					{refreshError && (
+						<div className='mt-2 rounded-md bg-red-900/50 p-3 text-base text-red-200'>
+							Refresh failed: {refreshError}
 						</div>
 					)}
 				</>
