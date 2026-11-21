@@ -46,6 +46,9 @@ pub fn update_account(app: &tauri::AppHandle, account: Account) -> Result<(), St
         .iter_mut()
         .find(|a| a.account_id == account.account_id)
         .ok_or_else(|| format!("Account {} not found", account.account_id))?;
+    if is_permanent_account(entry) && !is_permanent_account(&account) {
+        return Err("A temporary share cannot replace a permanent account.".to_string());
+    }
     *entry = encrypt_account(&account)?;
     save_accounts(app, &accounts)
 }
