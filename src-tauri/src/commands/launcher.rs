@@ -233,8 +233,20 @@ pub async fn launch_game(
     println!("{}", path);
     println!("{:#?}", args);
 
+    // The refresh above may have shortened the temporary deadline
+    // Recompute it from the updated account, keeping the original deadline as
+    // an upper bound so refreshing can never extend the allowed launch window
+    let refreshed_deadline = if account.refresh_token.is_some() {
+        account.refresh_expires_at
+    } else {
+        account.access_expires_at
+    };
+    let effective_deadline = temporary_deadline
+        .into_iter()
+        .chain(refreshed_deadline)
+        .min();
     // The exchange requests above may have outlived the temporary deadline
-    if is_temporary && temporary_deadline.is_some_and(expired) {
+    if is_temporary && effective_deadline.is_some_and(expired) {
         return Err("The shared account credentials have expired.".to_string());
     }
 
