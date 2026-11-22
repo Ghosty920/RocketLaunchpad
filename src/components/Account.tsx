@@ -178,8 +178,11 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 							This share code has expired. Launch the game with this account first to update its tokens.
 						</div>
 					) : (
-						<div className='mt-4 overflow-hidden rounded-md bg-gray-200/40 p-4 font-mono text-sm select-none break-all blur-sm transition-[filter] duration-500 hover:blur-none'>
-							{truncate(data, 51 * 7)}
+						<div className='contents'>
+							{/* Above div: fix for the blur not applying directly when switching between modes because of React */}
+							<div className='mt-4 overflow-hidden rounded-md bg-gray-200/40 p-4 font-mono text-sm select-none break-all blur-sm transition-[filter] duration-500 hover:blur-none'>
+								{truncate(data, 51 * 7)}
+							</div>
 						</div>
 					)}
 					{refreshError && (
