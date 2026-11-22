@@ -1,4 +1,5 @@
 use crate::crypt::{decrypt, encrypt};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 use tauri::Manager;
@@ -30,6 +31,16 @@ pub struct AccountInfo {
 
 pub fn is_permanent_account(account: &Account) -> bool {
     !account.auth_device_id.is_empty() && !account.auth_secret.is_empty()
+}
+
+fn effective_expires_at(account: &Account) -> Option<i64> {
+    if is_permanent_account(account) {
+        None
+    } else if account.refresh_token.is_some() {
+        account.refresh_expires_at
+    } else {
+        account.access_expires_at
+    }
 }
 
 pub fn accounts_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -176,21 +187,32 @@ pub fn get_accounts(app: tauri::AppHandle) -> Result<Vec<AccountInfo>, String> {
     Ok(accounts
         .into_iter()
         .map(|a| {
-            let is_permanent = is_permanent_account(&a);
+            let expires_at = effective_expires_at(&a);
             AccountInfo {
                 username: a.username,
                 account_id: a.account_id,
                 auth_device_id: a.auth_device_id.clone(),
-                expires_at: if is_permanent {
-                    None
-                } else if a.refresh_token.is_some() {
-                    a.refresh_expires_at
-                } else {
-                    a.access_expires_at
-                },
+                expires_at,
             }
         })
         .collect())
+}
+
+pub fn cleanup_expired_accounts(app: &tauri::AppHandle) -> Result<(), String> {
+    let accounts = get_raw_accounts(app)?;
+    let account_count = accounts.len();
+    let now = Utc::now().timestamp_millis();
+
+    let active_accounts: Vec<Account> = accounts
+        .into_iter()
+        .filter(|account| effective_expires_at(account).is_none_or(|expires_at| expires_at > now))
+        .collect();
+
+    if active_accounts.len() == account_count {
+        return Ok(());
+    }
+
+    save_accounts(app, &active_accounts)
 }
 
 #[tauri::command]

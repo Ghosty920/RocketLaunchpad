@@ -28,6 +28,10 @@ pub fn run() {
             let cache = Cache::new(cache_path.to_str().unwrap());
             app.manage(cache);
 
+            if let Err(err) = commands::account::cleanup_expired_accounts(app.handle()) {
+                eprintln!("Failed to clean up expired accounts: {err}");
+            }
+
             stats_api::start_stats_listener(app.handle().clone());
             Ok(())
         })
