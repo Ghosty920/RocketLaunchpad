@@ -179,7 +179,7 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 						</div>
 					) : (
 						<div className='mt-4 overflow-hidden rounded-md bg-gray-200/40 p-4 font-mono text-sm select-none break-all blur-sm transition-[filter] duration-500 hover:blur-none'>
-							{truncate(data, 51 * 7 + 2)}
+							{truncate(data, 51 * 7)}
 						</div>
 					)}
 					{refreshError && (

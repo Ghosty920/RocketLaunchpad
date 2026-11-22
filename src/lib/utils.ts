@@ -1,6 +1,19 @@
-export function truncate(str: string, maxLength: number): string {
-	if (str.length <= maxLength) return str;
-	return str.slice(0, maxLength - 3) + '…';
+const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+export function truncate(text: string, maxLength: number): string {
+	if (text.length <= maxLength) return text;
+
+	const segments = [...graphemeSegmenter.segment(text)];
+
+	if (segments.length <= maxLength) return text;
+	if (maxLength === 0) return '';
+
+	return (
+		segments
+			.slice(0, maxLength - 1)
+			.map(({ segment }) => segment)
+			.join('') + '…'
+	);
 }
 
 export function formatRemaining(seconds: number) {

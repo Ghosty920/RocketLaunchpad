@@ -51,7 +51,6 @@ async function getUpdateInfo(): Promise<UpdateInfo | null> {
 			...info,
 		};
 	} catch (err) {
-		// @ts-expect-error typescript is retard
 		throw new Error(`Error checking for update`, { cause: err });
 	}
 }
