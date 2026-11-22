@@ -74,6 +74,7 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 			? 'No expiration'
 			: 'Expiration unavailable';
 	const shareExpired = expiration != null && expiration <= Date.now();
+	const remainingSeconds = expiration != null ? Math.max(0, Math.ceil((expiration - Date.now()) / 1000)) : null;
 
 	const copyToClipboard = async () => {
 		if (!data) return;
@@ -147,9 +148,9 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 					<div className='mt-4 grid grid-cols-3 gap-1 rounded-lg bg-black/20 p-1 text-base'>
 						{(
 							[
-								['permanent', 'Permanent'],
-								['access', 'Temporary'],
-								['refresh', 'Longer'],
+								['permanent', 'Forever'],
+								['access', 'Short-term (2h)'],
+								['refresh', 'Extended (48h)'],
 							] as const
 						).map(([mode, label]) => (
 							<button
@@ -171,7 +172,7 @@ function ModalAccountShare({ accountId, open, onClose }: { accountId: string; op
 					<div className='mt-2 text-base text-white/70'>
 						{shareMode === 'permanent'
 							? 'Includes the device credentials and does not expire.'
-							: `Valid until: ${expirationText}`}
+							: `Valid until: ${expirationText} (⌛ ${formatRemaining(remainingSeconds ?? 0)} remaining)`}
 					</div>
 					{shareExpired ? (
 						<div className='mt-2 rounded-md bg-red-900/50 p-3 text-base text-red-200'>
