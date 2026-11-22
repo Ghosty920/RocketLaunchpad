@@ -11,6 +11,7 @@ export type Config = {
 export type Account = {
 	Username: string;
 	AccountId: string;
+	ExpiresAt?: number | null;
 };
 
 export type FullAccount = Account & {

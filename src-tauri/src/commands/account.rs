@@ -1,4 +1,5 @@
 use crate::crypt::{decrypt, encrypt};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 use tauri::Manager;
@@ -25,6 +26,21 @@ pub struct AccountInfo {
     pub username: String,
     pub account_id: String,
     pub auth_device_id: String,
+    pub expires_at: Option<i64>,
+}
+
+pub fn is_permanent_account(account: &Account) -> bool {
+    !account.auth_device_id.is_empty() && !account.auth_secret.is_empty()
+}
+
+fn effective_expires_at(account: &Account) -> Option<i64> {
+    if is_permanent_account(account) {
+        None
+    } else if account.refresh_token.is_some() {
+        account.refresh_expires_at
+    } else {
+        account.access_expires_at
+    }
 }
 
 pub fn accounts_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -41,6 +57,9 @@ pub fn update_account(app: &tauri::AppHandle, account: Account) -> Result<(), St
         .iter_mut()
         .find(|a| a.account_id == account.account_id)
         .ok_or_else(|| format!("Account {} not found", account.account_id))?;
+    if is_permanent_account(entry) && !is_permanent_account(&account) {
+        return Err("A temporary share cannot replace a permanent account.".to_string());
+    }
     *entry = encrypt_account(&account)?;
     save_accounts(app, &accounts)
 }
@@ -167,12 +186,33 @@ pub fn get_accounts(app: tauri::AppHandle) -> Result<Vec<AccountInfo>, String> {
 
     Ok(accounts
         .into_iter()
-        .map(|a| AccountInfo {
-            username: a.username,
-            account_id: a.account_id,
-            auth_device_id: a.auth_device_id,
+        .map(|a| {
+            let expires_at = effective_expires_at(&a);
+            AccountInfo {
+                username: a.username,
+                account_id: a.account_id,
+                auth_device_id: a.auth_device_id.clone(),
+                expires_at,
+            }
         })
         .collect())
+}
+
+pub fn cleanup_expired_accounts(app: &tauri::AppHandle) -> Result<(), String> {
+    let accounts = get_raw_accounts(app)?;
+    let account_count = accounts.len();
+    let now = Utc::now().timestamp_millis();
+
+    let active_accounts: Vec<Account> = accounts
+        .into_iter()
+        .filter(|account| effective_expires_at(account).is_none_or(|expires_at| expires_at > now))
+        .collect();
+
+    if active_accounts.len() == account_count {
+        return Ok(());
+    }
+
+    save_accounts(app, &active_accounts)
 }
 
 #[tauri::command]
@@ -194,7 +234,12 @@ pub fn get_account(app: tauri::AppHandle, account_id: String) -> Result<Account,
 #[tauri::command]
 pub fn add_account(app: tauri::AppHandle, account: Account) -> Result<(), String> {
     let mut accounts = get_raw_accounts(&app)?;
-    if accounts.iter().any(|a| a.account_id == account.account_id) {
+    if let Some(existing) = accounts.iter().find(|a| a.account_id == account.account_id) {
+        let existing_is_permanent = is_permanent_account(existing);
+        let incoming_is_permanent = is_permanent_account(&account);
+        if existing_is_permanent && !incoming_is_permanent {
+            return Err("A temporary share cannot replace a permanent account.".to_string());
+        }
         return update_account(&app, account);
     }
     accounts.push(encrypt_account(&account)?);

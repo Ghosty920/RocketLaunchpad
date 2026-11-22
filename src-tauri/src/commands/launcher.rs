@@ -1,5 +1,6 @@
-use crate::commands::account::{get_account, update_account};
+use crate::commands::account::{Account, get_account, is_permanent_account, update_account};
 use crate::commands::config::get_config;
+use crate::commands::login::{RefreshError, use_device_auth, use_refresh_token};
 use crate::tools::webview::build_window;
 use crate::utils::{AUTH_EGL_TOKEN, expired, http_client};
 use serde_json::Value;
@@ -7,6 +8,62 @@ use std::process::Command;
 use std::sync::Mutex;
 use tauri::WebviewWindowBuilder;
 use tokio::sync::oneshot;
+
+/// Preserve a temporary share's effective expiry when a rejected refresh token
+/// is discarded: the deadline then falls back to `access_expires_at`, so cap it
+/// at the earlier of its current value and the refresh deadline
+fn cap_access_deadline_at_refresh_expiry(account: &mut Account, is_temporary: bool) {
+    if !is_temporary {
+        return;
+    }
+    if let Some(refresh_deadline) = account.refresh_expires_at {
+        account.access_expires_at = Some(
+            account
+                .access_expires_at
+                .map_or(refresh_deadline, |access_deadline| {
+                    access_deadline.min(refresh_deadline)
+                }),
+        );
+    }
+}
+
+#[tauri::command]
+pub async fn refresh_account(app: tauri::AppHandle, account_id: String) -> Result<Account, String> {
+    let client = http_client(&app)?;
+    let mut account = get_account(app.clone(), account_id)?;
+    let is_temporary = !is_permanent_account(&account);
+
+    let has_refresh_token = account
+        .refresh_token
+        .as_ref()
+        .is_some_and(|_| !expired(account.refresh_expires_at.unwrap_or(0)));
+
+    if has_refresh_token {
+        match use_refresh_token(&client, &mut account).await {
+            Ok(()) => {}
+            Err(RefreshError::Rejected(err)) => {
+                cap_access_deadline_at_refresh_expiry(&mut account, is_temporary);
+                account.refresh_token = None;
+                account.refresh_expires_at = None;
+                update_account(&app, account.clone())?;
+
+                if !is_temporary {
+                    use_device_auth(&client, &mut account).await?;
+                } else {
+                    return Err(err);
+                }
+            }
+            Err(RefreshError::Transient(err)) => return Err(err),
+        }
+    } else if is_temporary {
+        return Err("The shared account credentials have expired.".to_string());
+    } else {
+        use_device_auth(&client, &mut account).await?;
+    }
+
+    update_account(&app, account.clone())?;
+    Ok(account)
+}
 
 async fn get_oauth_exchange(
     client: &reqwest::Client,
@@ -151,9 +208,49 @@ pub async fn launch_game(
     let client = http_client(&app)?;
     let mut account = get_account(app.clone(), account_id)?;
 
-    // Refresh if the access token is expired
-    if expired(account.access_expires_at.unwrap_or(0)) {
-        crate::commands::login::use_device_auth(&client, &mut account).await?;
+    let is_temporary = !is_permanent_account(&account);
+    let temporary_deadline = if account.refresh_token.is_some() {
+        account.refresh_expires_at
+    } else {
+        account.access_expires_at
+    };
+    if is_temporary && temporary_deadline.is_some_and(expired) {
+        return Err("The shared account credentials have expired.".to_string());
+    }
+
+    // Refresh the access token when possible, preferring the shared refresh token
+    if account.access_token.is_none() || expired(account.access_expires_at.unwrap_or(0)) {
+        let has_device_auth = !is_temporary;
+        let has_refresh_token = account
+            .refresh_token
+            .as_ref()
+            .is_some_and(|_| !expired(account.refresh_expires_at.unwrap_or(0)));
+
+        if has_refresh_token {
+            match use_refresh_token(&client, &mut account).await {
+                Ok(()) => {}
+                Err(RefreshError::Rejected(err)) => {
+                    // The refresh token is no longer valid; discard it so future
+                    // launches don't retry it and can fall back to device auth
+                    // Preserve a temporary share's effective deadline first
+                    cap_access_deadline_at_refresh_expiry(&mut account, !has_device_auth);
+                    account.refresh_token = None;
+                    account.refresh_expires_at = None;
+                    update_account(&app, account.clone())?;
+
+                    if !has_device_auth {
+                        return Err(err);
+                    }
+                    use_device_auth(&client, &mut account).await?;
+                }
+                // Network failures and timeouts must not invalidate stored tokens
+                Err(RefreshError::Transient(err)) => return Err(err),
+            }
+        } else if has_device_auth {
+            use_device_auth(&client, &mut account).await?;
+        } else {
+            return Err("The shared account credentials have expired.".to_string());
+        }
         update_account(&app, account.clone())?;
     }
 
@@ -193,6 +290,23 @@ pub async fn launch_game(
 
     println!("{}", path);
     println!("{:#?}", args);
+
+    // The refresh above may have shortened the temporary deadline
+    // Recompute it from the updated account, keeping the original deadline as
+    // an upper bound so refreshing can never extend the allowed launch window
+    let refreshed_deadline = if account.refresh_token.is_some() {
+        account.refresh_expires_at
+    } else {
+        account.access_expires_at
+    };
+    let effective_deadline = temporary_deadline
+        .into_iter()
+        .chain(refreshed_deadline)
+        .min();
+    // The exchange requests above may have outlived the temporary deadline
+    if is_temporary && effective_deadline.is_some_and(expired) {
+        return Err("The shared account credentials have expired.".to_string());
+    }
 
     Command::new(&path)
         .args(&args)
