@@ -1,0 +1,45 @@
+name: Dependabot PR title
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  retitle:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rename PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          body=$(printf '%s' "$PR_BODY" | tr -d '\r')
+          group=$(printf '%s\n' "$body" | grep -oP '^Bumps the \K\S+(?= group)' | head -1)
+          total=$(printf '%s\n' "$body" \
+            | grep -P '^Bumps the \S+ group' \
+            | grep -oP 'with \K\d+(?= updates?)' \
+            | paste -sd+ - | bc)
+          # Fallback if the thing above failed, shouldn't happen, but just in case
+          if [ -z "$total" ]; then
+            total=$(printf '%s\n' "$body" | grep -c '^Updates `')
+          fi
+
+          if [ -z "$group" ] || [ -z "$total" ] || [ "$total" -eq 0 ]; then
+            echo "Not a recognized group PR, skipping title update"
+            exit 0
+          fi
+
+          noun="dependencies"
+          [ "$total" -eq 1 ] && noun="dependency"
+
+          new_title="chore(deps): bump $total $group $noun"
+
+          if [ "$PR_TITLE" != "$new_title" ]; then
+            gh pr edit "$PR_URL" --title "$new_title"
+          fi
