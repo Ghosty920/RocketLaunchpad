@@ -6,6 +6,8 @@ multi-ecosystem-groups:
       interval: weekly
     labels:
       - dependencies
+    commit-message:
+      prefix: 'chore(deps)'
 
 updates:
   # Tauri dependencies
