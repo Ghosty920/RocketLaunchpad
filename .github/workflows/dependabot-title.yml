@@ -27,7 +27,7 @@ jobs:
             | paste -sd+ - | bc)
           # Fallback if the thing above failed, shouldn't happen, but just in case
           if [ -z "$total" ]; then
-            total=$(printf '%s\n' "$body" | grep -c '^Updates `')
+            total=$(printf '%s\n' "$body" | grep -c '^Updates `' || true)
           fi
 
           if [ -z "$group" ] || [ -z "$total" ] || [ "$total" -eq 0 ]; then
