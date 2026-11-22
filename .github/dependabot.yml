@@ -1,5 +1,32 @@
 version: 2
+
+multi-ecosystem-groups:
+  tauri:
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+
 updates:
+  # Tauri dependencies
+  - package-ecosystem: npm
+    directory: /
+    patterns:
+      - '@tauri-apps/*'
+    labels:
+      - javascript
+    multi-ecosystem-group: tauri
+
+  - package-ecosystem: cargo
+    directory: /src-tauri
+    patterns:
+      - 'tauri'
+      - 'tauri-*'
+    labels:
+      - rust
+    multi-ecosystem-group: tauri
+
+  # Other dependencies
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -8,9 +35,6 @@ updates:
       - dependencies
       - javascript
     groups:
-      tauri:
-        patterns:
-          - '@tauri-apps/*'
       node:
         patterns:
           - '*'
@@ -25,10 +49,6 @@ updates:
       - dependencies
       - rust
     groups:
-      tauri:
-        patterns:
-          - 'tauri'
-          - 'tauri-*'
       rust:
         patterns:
           - '*'
@@ -36,6 +56,7 @@ updates:
           - 'tauri'
           - 'tauri-*'
 
+  # GitHub Actions
   - package-ecosystem: github-actions
     directory: /
     schedule:
